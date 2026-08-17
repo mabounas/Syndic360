@@ -50,3 +50,6 @@ next-env.d.ts
 /.claude/skills/
 
 /app/generated/prisma
+
+.vercel
+.env*
