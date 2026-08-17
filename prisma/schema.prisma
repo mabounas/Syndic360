@@ -1,0 +1,234 @@
+// Syndic360 — schéma de données MVP (sous-ensemble de la section 5 du cahier des charges)
+// Multi-tenant par colonne organisationId (pas de schéma-par-tenant, pour rester compatible
+// avec le pooling serverless de Neon/Vercel).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  SYNDIC_ADMIN
+  GESTIONNAIRE
+  CONSEIL_BENEVOLE
+  COPROPRIETAIRE
+  PRESTATAIRE
+}
+
+enum LotType {
+  APPARTEMENT
+  COMMERCE
+  PARKING
+  CAVE
+}
+
+enum AppelChargesStatut {
+  BROUILLON
+  PUBLIE
+}
+
+enum QuotePartStatut {
+  EN_ATTENTE
+  PAYE
+  EN_RETARD
+}
+
+enum DocumentDossier {
+  REGLEMENT
+  PV_AG
+  CONTRATS
+  BUDGETS
+  DIVERS
+}
+
+enum DocumentVisibilite {
+  COMMUN
+  PRIVE
+}
+
+model Organisation {
+  id        String   @id @default(cuid())
+  nom       String
+  plan      String   @default("BENEVOLE")
+  createdAt DateTime @default(now())
+
+  users      User[]
+  residences Residence[]
+
+  @@map("organisations")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  nom            String
+  prenom         String
+  telephone      String?
+  role           Role
+  organisationId String
+  createdAt      DateTime @default(now())
+
+  organisation    Organisation     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  lots            LotProprietaire[]
+  documentsUploaded Document[]     @relation("DocumentUploader")
+  auditLogs       AuditLog[]
+
+  @@index([organisationId])
+  @@map("users")
+}
+
+model Residence {
+  id             String   @id @default(cuid())
+  nom            String
+  adresse        String
+  ville          String
+  nbLots         Int      @default(0)
+  organisationId String
+  createdAt      DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  batiments    Batiment[]
+  budgets      Budget[]
+  documents    Document[]
+
+  @@index([organisationId])
+  @@map("residences")
+}
+
+model Batiment {
+  id          String @id @default(cuid())
+  nom         String
+  nbEtages    Int    @default(0)
+  residenceId String
+
+  residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  lots      Lot[]
+
+  @@index([residenceId])
+  @@map("batiments")
+}
+
+model Lot {
+  id                String  @id @default(cuid())
+  numero            String
+  type              LotType @default(APPARTEMENT)
+  surface           Float?
+  tantiemesGeneraux Int     @default(0)
+  tantiemesCharges  Int     @default(0)
+  etage             Int?
+  batimentId        String
+
+  batiment      Batiment          @relation(fields: [batimentId], references: [id], onDelete: Cascade)
+  proprietaires LotProprietaire[]
+  quoteParts    QuotePart[]
+  documents     Document[]
+
+  @@index([batimentId])
+  @@map("lots")
+}
+
+// Table de jointure Lot <-> User : gère l'indivision (plusieurs copropriétaires par lot)
+model LotProprietaire {
+  id     String @id @default(cuid())
+  lotId  String
+  userId String
+
+  lot  Lot  @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lotId, userId])
+  @@index([userId])
+  @@map("lot_proprietaires")
+}
+
+model Budget {
+  id              String @id @default(cuid())
+  annee           Int
+  montantTotal    Float
+  fondsTravauxMin Float  @default(0)
+  residenceId     String
+
+  residence     Residence      @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  appelsCharges AppelCharges[]
+
+  @@unique([residenceId, annee])
+  @@index([residenceId])
+  @@map("budgets")
+}
+
+model AppelCharges {
+  id            String              @id @default(cuid())
+  periode       String
+  dateEcheance  DateTime
+  montantTotal  Float
+  statut        AppelChargesStatut  @default(BROUILLON)
+  budgetId      String
+  createdAt     DateTime            @default(now())
+
+  budget     Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  quoteParts QuotePart[]
+
+  @@index([budgetId])
+  @@map("appels_charges")
+}
+
+model QuotePart {
+  id             String          @id @default(cuid())
+  appelChargesId String
+  lotId          String
+  montant        Float
+  statut         QuotePartStatut @default(EN_ATTENTE)
+  datePaiement   DateTime?
+  // Champs prévus pour la Phase 2 (paiement en ligne CMI/Stripe) — nullable, pas de logique branchée en V1
+  stripePaymentIntentId String?
+  cmiRef                String?
+
+  appelCharges AppelCharges @relation(fields: [appelChargesId], references: [id], onDelete: Cascade)
+  lot          Lot          @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@unique([appelChargesId, lotId])
+  @@index([lotId])
+  @@map("quote_parts")
+}
+
+model Document {
+  id          String              @id @default(cuid())
+  nom         String
+  type        String
+  url         String
+  taille      Int
+  dossier     DocumentDossier     @default(DIVERS)
+  visibilite  DocumentVisibilite  @default(COMMUN)
+  residenceId String
+  lotId       String?
+  uploaderId  String
+  createdAt   DateTime            @default(now())
+
+  residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  lot       Lot?      @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  uploader  User      @relation("DocumentUploader", fields: [uploaderId], references: [id])
+
+  @@index([residenceId])
+  @@index([lotId])
+  @@map("documents")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  cible     String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("audit_logs")
+}

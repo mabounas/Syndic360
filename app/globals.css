@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
+
+  /* Tokens Syndic360 — section 2.3 / 11.1 du cahier des charges */
+  --color-primary: #0f4c81;
+  --color-primary-light: #1a6cb5;
+  --color-primary-dark: #0a3560;
+
+  --color-secondary: #e87722;
+  --color-secondary-light: #f0923a;
+  --color-secondary-dark: #c45a0a;
+
+  --color-success: #1a6b4a;
+  --color-success-light: #22a06b;
+  --color-success-dark: #0f4a33;
+
+  --color-danger: #dc2626;
+  --color-warning: #d97706;
+
+  --color-bg-page: #f4f7fc;
+  --color-bg-card: #ffffff;
+  --color-bg-sidebar: #0f4c81;
+
+  --color-text-primary: #111928;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  --color-border: #e2eaf4;
+  --color-border-strong: #c7d9ef;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-sans);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-primary: var(--color-primary);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-dark: var(--color-primary-dark);
+
+  --color-secondary: var(--color-secondary);
+  --color-secondary-light: var(--color-secondary-light);
+  --color-secondary-dark: var(--color-secondary-dark);
+
+  --color-success: var(--color-success);
+  --color-success-light: var(--color-success-light);
+  --color-success-dark: var(--color-success-dark);
+
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+
+  --color-bg-page: var(--color-bg-page);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --radius-card: 12px;
+  --radius-button: 8px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
 }

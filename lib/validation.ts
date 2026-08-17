@@ -1,0 +1,84 @@
+import { z } from "zod";
+
+export const loginSchema = z.object({
+  email: z.email("Adresse email invalide"),
+  password: z.string().min(1, "Mot de passe requis"),
+});
+
+export const registerSchema = z.object({
+  organisationNom: z.string().min(2, "Nom d'organisation trop court"),
+  plan: z.enum(["BENEVOLE", "STARTER"]),
+  nom: z.string().min(1, "Nom requis"),
+  prenom: z.string().min(1, "Prénom requis"),
+  email: z.email("Adresse email invalide"),
+  password: z.string().min(8, "8 caractères minimum"),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const residenceSchema = z.object({
+  nom: z.string().min(2, "Nom trop court"),
+  adresse: z.string().min(2, "Adresse requise"),
+  ville: z.string().min(2, "Ville requise"),
+});
+export type ResidenceInput = z.infer<typeof residenceSchema>;
+
+export const batimentSchema = z.object({
+  residenceId: z.string().min(1),
+  nom: z.string().min(1, "Nom requis"),
+  nbEtages: z.coerce.number().int().min(0),
+});
+export type BatimentInput = z.infer<typeof batimentSchema>;
+
+export const lotSchema = z.object({
+  batimentId: z.string().min(1),
+  numero: z.string().min(1, "Numéro requis"),
+  type: z.enum(["APPARTEMENT", "COMMERCE", "PARKING", "CAVE"]),
+  surface: z.coerce.number().min(0).optional(),
+  tantiemesGeneraux: z.coerce.number().int().min(0),
+  tantiemesCharges: z.coerce.number().int().min(0),
+  etage: z.coerce.number().int().optional(),
+});
+export type LotInput = z.infer<typeof lotSchema>;
+
+export const assignProprietaireSchema = z.object({
+  email: z.email("Adresse email invalide"),
+  nom: z.string().min(1, "Nom requis"),
+  prenom: z.string().min(1, "Prénom requis"),
+  password: z.string().min(8, "8 caractères minimum"),
+});
+export type AssignProprietaireInput = z.infer<typeof assignProprietaireSchema>;
+
+export const budgetSchema = z.object({
+  residenceId: z.string().min(1),
+  annee: z.coerce.number().int().min(2000),
+  montantTotal: z.coerce.number().min(0),
+  fondsTravauxMin: z.coerce.number().min(0),
+});
+export type BudgetInput = z.infer<typeof budgetSchema>;
+
+export const appelChargesSchema = z.object({
+  budgetId: z.string().min(1),
+  periode: z.string().min(1, "Période requise"),
+  dateEcheance: z.string().min(1, "Date d'échéance requise"),
+  montantTotal: z.coerce.number().min(0),
+});
+export type AppelChargesInput = z.infer<typeof appelChargesSchema>;
+
+export const quotePartUpdateSchema = z.object({
+  statut: z.enum(["EN_ATTENTE", "PAYE", "EN_RETARD"]),
+});
+export type QuotePartUpdateInput = z.infer<typeof quotePartUpdateSchema>;
+
+export const documentSchema = z.object({
+  residenceId: z.string().min(1),
+  lotId: z.string().optional(),
+  nom: z.string().min(1, "Nom requis"),
+  type: z.string().min(1),
+  url: z.string().min(1),
+  taille: z.coerce.number().int().min(0),
+  dossier: z.enum(["REGLEMENT", "PV_AG", "CONTRATS", "BUDGETS", "DIVERS"]),
+  visibilite: z.enum(["COMMUN", "PRIVE"]),
+});
+export type DocumentInput = z.infer<typeof documentSchema>;
