@@ -62,7 +62,9 @@ export const appelChargesSchema = z.object({
   budgetId: z.string().min(1),
   periode: z.string().min(1, "Période requise"),
   dateEcheance: z.string().min(1, "Date d'échéance requise"),
-  montantTotal: z.coerce.number().min(0),
+  repartition: z.enum(["TANTIEMES", "FORFAIT"]),
+  montantTotal: z.coerce.number().min(0).optional(),
+  montantParLot: z.coerce.number().min(0).optional(),
 });
 export type AppelChargesInput = z.infer<typeof appelChargesSchema>;
 

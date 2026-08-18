@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { FileText, Trash2 } from "lucide-react";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
-import type { DocumentRow, LotWithOwners } from "./types";
+import type { DocumentRow, LotOption } from "./types";
 
 const DOSSIERS = [
   { value: "REGLEMENT", label: "Règlement de copropriété" },
@@ -22,7 +22,7 @@ export function DocumentsSection({
 }: {
   residenceId: string;
   documents: DocumentRow[];
-  lots: LotWithOwners[];
+  lots: LotOption[];
 }) {
   const router = useRouter();
   const [dossier, setDossier] = useState<(typeof DOSSIERS)[number]["value"]>("DIVERS");

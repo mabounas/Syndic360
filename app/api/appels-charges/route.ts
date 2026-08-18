@@ -5,8 +5,9 @@ import { handleApiError, notFound, requireStaffRole } from "@/lib/rbac";
 import { assertResidenceAccess } from "@/lib/rbac";
 import { appelChargesSchema } from "@/lib/validation";
 
-// Crée un appel de charges et répartit automatiquement le montant entre les lots
-// de la résidence au prorata des tantièmes de charges (section 6.4 du CDC).
+// Crée un appel de charges et répartit le montant entre les lots de la résidence,
+// soit au prorata des tantièmes de charges, soit en forfait identique par lot —
+// pratique courante au Maroc pour les petits syndics (section 6.4 du CDC).
 export async function POST(request: Request) {
   try {
     const session = await getSession();
@@ -21,6 +22,13 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    const { repartition, montantTotal, montantParLot } = parsed.data;
+    if (repartition === "TANTIEMES" && !montantTotal) {
+      return NextResponse.json({ error: "Montant total requis." }, { status: 400 });
+    }
+    if (repartition === "FORFAIT" && !montantParLot) {
+      return NextResponse.json({ error: "Montant par lot requis." }, { status: 400 });
+    }
 
     const budget = await prisma.budget.findUnique({
       where: { id: parsed.data.budgetId },
@@ -33,12 +41,32 @@ export async function POST(request: Request) {
       where: { batiment: { residenceId: budget!.residenceId } },
       select: { id: true, tantiemesCharges: true },
     });
-    const totalTantiemes = lots.reduce((sum, lot) => sum + lot.tantiemesCharges, 0);
-    if (lots.length === 0 || totalTantiemes === 0) {
+    if (lots.length === 0) {
       return NextResponse.json(
-        { error: "La résidence n'a aucun lot avec des tantièmes de charges définis." },
+        { error: "La résidence n'a aucun lot." },
         { status: 422 }
       );
+    }
+
+    let quotePartsData: { lotId: string; montant: number }[];
+    let appelMontantTotal: number;
+
+    if (repartition === "FORFAIT") {
+      appelMontantTotal = Math.round(montantParLot! * lots.length * 100) / 100;
+      quotePartsData = lots.map((lot) => ({ lotId: lot.id, montant: montantParLot! }));
+    } else {
+      const totalTantiemes = lots.reduce((sum, lot) => sum + lot.tantiemesCharges, 0);
+      if (totalTantiemes === 0) {
+        return NextResponse.json(
+          { error: "La résidence n'a aucun lot avec des tantièmes de charges définis." },
+          { status: 422 }
+        );
+      }
+      appelMontantTotal = montantTotal!;
+      quotePartsData = lots.map((lot) => ({
+        lotId: lot.id,
+        montant: Math.round((montantTotal! * lot.tantiemesCharges * 100) / totalTantiemes) / 100,
+      }));
     }
 
     const appel = await prisma.$transaction(async (tx) => {
@@ -47,20 +75,16 @@ export async function POST(request: Request) {
           budgetId: parsed.data.budgetId,
           periode: parsed.data.periode,
           dateEcheance: new Date(parsed.data.dateEcheance),
-          montantTotal: parsed.data.montantTotal,
+          montantTotal: appelMontantTotal,
           statut: "PUBLIE",
         },
       });
 
       await tx.quotePart.createMany({
-        data: lots.map((lot) => ({
+        data: quotePartsData.map((qp) => ({
           appelChargesId: created.id,
-          lotId: lot.id,
-          montant:
-            Math.round(
-              (parsed.data.montantTotal * lot.tantiemesCharges * 100) /
-                totalTantiemes
-            ) / 100,
+          lotId: qp.lotId,
+          montant: qp.montant,
           statut: "EN_ATTENTE" as const,
         })),
       });

@@ -97,7 +97,12 @@ function NewAppelChargesForm({ budgetId }: { budgetId: string }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ periode: "", dateEcheance: "", montantTotal: "" });
+  const [form, setForm] = useState({
+    periode: "",
+    dateEcheance: "",
+    repartition: "TANTIEMES" as "TANTIEMES" | "FORFAIT",
+    montant: "",
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +115,10 @@ function NewAppelChargesForm({ budgetId }: { budgetId: string }) {
         budgetId,
         periode: form.periode,
         dateEcheance: form.dateEcheance,
-        montantTotal: Number(form.montantTotal),
+        repartition: form.repartition,
+        ...(form.repartition === "TANTIEMES"
+          ? { montantTotal: Number(form.montant) }
+          : { montantParLot: Number(form.montant) }),
       }),
     });
     setPending(false);
@@ -150,13 +158,21 @@ function NewAppelChargesForm({ budgetId }: { budgetId: string }) {
         onChange={(e) => setForm({ ...form, dateEcheance: e.target.value })}
         className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
+      <select
+        value={form.repartition}
+        onChange={(e) => setForm({ ...form, repartition: e.target.value as typeof form.repartition })}
+        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+      >
+        <option value="TANTIEMES">Au prorata des tantièmes</option>
+        <option value="FORFAIT">Forfait identique par lot</option>
+      </select>
       <input
         required
         type="number"
-        placeholder="Montant total (MAD)"
-        value={form.montantTotal}
-        onChange={(e) => setForm({ ...form, montantTotal: e.target.value })}
-        className="w-40 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+        placeholder={form.repartition === "TANTIEMES" ? "Montant total (MAD)" : "Montant par lot (MAD)"}
+        value={form.montant}
+        onChange={(e) => setForm({ ...form, montant: e.target.value })}
+        className="w-44 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
       <button
         type="submit"

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import type { AgRow, LotWithOwners, ResolutionRow } from "./types";
+import type { AgRow, ResolutionRow, VoteLot } from "./types";
 
 const MAJORITE_LABELS: Record<ResolutionRow["typeMajorite"], string> = {
   ART24: "Art. 24 — majorité simple",
@@ -17,7 +17,7 @@ const STATUT_LABELS: Record<AgRow["statut"], string> = {
   CLOTUREE: "Clôturée",
 };
 
-function computeResultat(resolution: ResolutionRow, lots: LotWithOwners[]) {
+function computeResultat(resolution: ResolutionRow, lots: VoteLot[]) {
   const tantiemesParLot = new Map(lots.map((l) => [l.id, l.tantiemesGeneraux]));
   const totalTantiemes = lots.reduce((s, l) => s + l.tantiemesGeneraux, 0);
   let pour = 0;
@@ -178,7 +178,7 @@ function NewResolutionForm({ agId }: { agId: string }) {
   );
 }
 
-function VoteForm({ resolutionId, lots }: { resolutionId: string; lots: LotWithOwners[] }) {
+function VoteForm({ resolutionId, lots }: { resolutionId: string; lots: VoteLot[] }) {
   const router = useRouter();
   const [lotId, setLotId] = useState("");
   const [pending, setPending] = useState(false);
@@ -222,7 +222,7 @@ function VoteForm({ resolutionId, lots }: { resolutionId: string; lots: LotWithO
   );
 }
 
-function AgCard({ ag, lots }: { ag: AgRow; lots: LotWithOwners[] }) {
+function AgCard({ ag, lots }: { ag: AgRow; lots: VoteLot[] }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -299,7 +299,7 @@ export function AgSection({
 }: {
   residenceId: string;
   assemblees: AgRow[];
-  lots: LotWithOwners[];
+  lots: VoteLot[];
 }) {
   return (
     <div className="space-y-4 rounded-[var(--radius-card)] border border-border bg-bg-card p-5">

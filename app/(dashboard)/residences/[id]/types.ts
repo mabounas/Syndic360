@@ -46,6 +46,15 @@ export type BudgetWithAppels = {
   appelsCharges: AppelWithQuoteParts[];
 };
 
+export type LotOption = {
+  id: string;
+  numero: string;
+};
+
+export type VoteLot = LotOption & {
+  tantiemesGeneraux: number;
+};
+
 export type VoteRow = {
   id: string;
   lotId: string;
