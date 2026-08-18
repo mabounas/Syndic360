@@ -215,6 +215,7 @@ export function FinanceSection({
                     montant: qp.montant,
                     statut: qp.statut,
                     datePaiement: qp.datePaiement ? qp.datePaiement.toISOString() : null,
+                    relanceCount: qp.relances.length,
                   }))}
                 />
               </div>

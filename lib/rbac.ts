@@ -33,6 +33,11 @@ const STAFF_ROLES: Role[] = [
   "CONSEIL_BENEVOLE",
 ];
 
+// SUPER_ADMIN et SYNDIC_ADMIN voient toutes les résidences de leur organisation.
+// GESTIONNAIRE et CONSEIL_BENEVOLE ne voient que les résidences où ils sont
+// explicitement assignés comme administrateur (table ResidenceAdmin).
+const ORG_WIDE_ROLES: Role[] = ["SUPER_ADMIN", "SYNDIC_ADMIN"];
+
 export function isStaffRole(role: Role) {
   return STAFF_ROLES.includes(role);
 }
@@ -42,13 +47,23 @@ export function requireStaffRole(session: SessionPayload) {
   if (!isStaffRole(session.role)) forbidden();
 }
 
+/** Exige un rôle habilité à gérer les administrateurs d'une résidence (SYNDIC_ADMIN/SUPER_ADMIN). */
+export function requireOrgAdminRole(session: SessionPayload) {
+  if (!ORG_WIDE_ROLES.includes(session.role)) forbidden();
+}
+
 /**
  * Clause `where` Prisma pour limiter une requête Residence à ce que la session peut voir.
- * SUPER_ADMIN voit tout ; les autres rôles staff sont bornés à leur organisation.
  */
 export function residenceScopeWhere(session: SessionPayload) {
   if (session.role === "SUPER_ADMIN") return {};
-  return { organisationId: session.organisationId };
+  if (session.role === "SYNDIC_ADMIN") {
+    return { organisationId: session.organisationId };
+  }
+  return {
+    organisationId: session.organisationId,
+    admins: { some: { userId: session.sub } },
+  };
 }
 
 /** Vérifie que la session (rôle staff) a le droit d'accéder à cette résidence. */
@@ -61,37 +76,39 @@ export async function assertResidenceAccess(
     select: { id: true, organisationId: true },
   });
   if (!residence) notFound("Résidence introuvable.");
-  if (
-    session.role !== "SUPER_ADMIN" &&
-    residence!.organisationId !== session.organisationId
-  ) {
+
+  if (session.role === "SUPER_ADMIN") return residence!;
+
+  if (residence!.organisationId !== session.organisationId) {
     forbidden("Cette résidence n'appartient pas à votre organisation.");
+  }
+
+  if (ORG_WIDE_ROLES.includes(session.role)) return residence!;
+
+  const isAssigned = await prisma.residenceAdmin.findFirst({
+    where: { residenceId, userId: session.sub },
+    select: { id: true },
+  });
+  if (!isAssigned) {
+    forbidden("Vous n'êtes pas administrateur de cette résidence.");
   }
   return residence!;
 }
 
 /**
  * Vérifie l'accès à un lot :
- * - staff : le lot doit appartenir à une résidence de son organisation (ou SUPER_ADMIN = tout)
+ * - staff : la résidence du lot doit être accessible (assertResidenceAccess)
  * - copropriétaire : le lot doit lui appartenir (table LotProprietaire)
  */
 export async function assertLotAccess(session: SessionPayload, lotId: string) {
   const lot = await prisma.lot.findUnique({
     where: { id: lotId },
-    select: {
-      id: true,
-      batiment: { select: { residenceId: true, residence: { select: { organisationId: true } } } },
-    },
+    select: { id: true, batiment: { select: { residenceId: true } } },
   });
   if (!lot) notFound("Lot introuvable.");
 
   if (isStaffRole(session.role)) {
-    if (
-      session.role !== "SUPER_ADMIN" &&
-      lot!.batiment.residence.organisationId !== session.organisationId
-    ) {
-      forbidden("Ce lot n'appartient pas à votre organisation.");
-    }
+    await assertResidenceAccess(session, lot!.batiment.residenceId);
     return lot!;
   }
 

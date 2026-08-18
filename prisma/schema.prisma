@@ -51,6 +51,34 @@ enum DocumentVisibilite {
   PRIVE
 }
 
+enum AgType {
+  ORDINAIRE
+  EXTRAORDINAIRE
+}
+
+enum AgStatut {
+  PLANIFIEE
+  CONVOQUEE
+  CLOTUREE
+}
+
+enum TypeMajorite {
+  ART24
+  ART25
+  ART26
+}
+
+enum VoteValeur {
+  POUR
+  CONTRE
+  ABSTENTION
+}
+
+enum EcritureType {
+  RECETTE
+  DEPENSE
+}
+
 model Organisation {
   id        String   @id @default(cuid())
   nom       String
@@ -78,6 +106,9 @@ model User {
   lots            LotProprietaire[]
   documentsUploaded Document[]     @relation("DocumentUploader")
   auditLogs       AuditLog[]
+  residenceAdmins ResidenceAdmin[]
+  votes           Vote[]
+  relancesEnvoyees Relance[]
 
   @@index([organisationId])
   @@map("users")
@@ -92,13 +123,33 @@ model Residence {
   organisationId String
   createdAt      DateTime @default(now())
 
-  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisation Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   batiments    Batiment[]
   budgets      Budget[]
   documents    Document[]
+  admins       ResidenceAdmin[]
+  assemblees   Ag[]
+  ecritures    EcritureComptable[]
 
   @@index([organisationId])
   @@map("residences")
+}
+
+// Assignation d'un gestionnaire/conseil bénévole à une résidence précise.
+// Un SYNDIC_ADMIN voit toutes les résidences de son organisation ; un GESTIONNAIRE
+// ou CONSEIL_BENEVOLE ne voit que les résidences où il est explicitement admin.
+model ResidenceAdmin {
+  id          String @id @default(cuid())
+  residenceId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([residenceId, userId])
+  @@index([userId])
+  @@map("residence_admins")
 }
 
 model Batiment {
@@ -128,6 +179,7 @@ model Lot {
   proprietaires LotProprietaire[]
   quoteParts    QuotePart[]
   documents     Document[]
+  votes         Vote[]
 
   @@index([batimentId])
   @@map("lots")
@@ -191,10 +243,27 @@ model QuotePart {
 
   appelCharges AppelCharges @relation(fields: [appelChargesId], references: [id], onDelete: Cascade)
   lot          Lot          @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  relances     Relance[]
 
   @@unique([appelChargesId, lotId])
   @@index([lotId])
   @@map("quote_parts")
+}
+
+// Historique des relances (déclenchement manuel en V1 — l'envoi email/SMS réel
+// nécessite une clé Resend/Twilio non encore configurée, voir section 7.2 du CDC).
+model Relance {
+  id             String   @id @default(cuid())
+  quotePartId    String
+  type           String
+  envoyeeAt      DateTime @default(now())
+  envoyeeParId   String?
+
+  quotePart  QuotePart @relation(fields: [quotePartId], references: [id], onDelete: Cascade)
+  envoyeePar User?     @relation(fields: [envoyeeParId], references: [id])
+
+  @@index([quotePartId])
+  @@map("relances")
 }
 
 model Document {
@@ -217,6 +286,81 @@ model Document {
   @@index([residenceId])
   @@index([lotId])
   @@map("documents")
+}
+
+// Assemblée générale — section 6.5 du CDC. Calcul de majorité simplifié :
+// ART24 = majorité des tantièmes votants ; ART25 = majorité absolue des tantièmes
+// de la résidence ; ART26 = double majorité approximée aux 2/3 des tantièmes.
+model Ag {
+  id                  String   @id @default(cuid())
+  date                DateTime
+  lieu                String
+  type                AgType   @default(ORDINAIRE)
+  statut              AgStatut @default(PLANIFIEE)
+  convocationEnvoyee  Boolean  @default(false)
+  residenceId         String
+  createdAt           DateTime @default(now())
+
+  residence   Residence    @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+  resolutions Resolution[]
+
+  @@index([residenceId])
+  @@map("assemblees")
+}
+
+model Resolution {
+  id           String       @id @default(cuid())
+  titre        String
+  description  String
+  typeMajorite TypeMajorite @default(ART24)
+  ordre        Int          @default(0)
+  agId         String
+
+  ag    Ag     @relation(fields: [agId], references: [id], onDelete: Cascade)
+  votes Vote[]
+
+  @@index([agId])
+  @@map("resolutions")
+}
+
+// Un vote par lot et par résolution (le lot porte le poids en tantièmes, quel que
+// soit le nombre de co-indivisaires). Enregistré par le copropriétaire lui-même
+// (pour son lot) ou par un gestionnaire/conseil bénévole (vote en séance).
+model Vote {
+  id           String     @id @default(cuid())
+  resolutionId String
+  lotId        String
+  userId       String
+  valeur       VoteValeur
+  createdAt    DateTime   @default(now())
+
+  resolution Resolution @relation(fields: [resolutionId], references: [id], onDelete: Cascade)
+  lot        Lot        @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([resolutionId, lotId])
+  @@index([lotId])
+  @@map("votes")
+}
+
+// Comptabilité simplifiée — section 6.4 du CDC (hors plan comptable BNPJ complet
+// et rapprochement bancaire OFX, différés). Catégorie en texte libre plutôt qu'un
+// plan comptable structuré, pour rester dans le périmètre MVP+Phase2.
+model EcritureComptable {
+  id           String       @id @default(cuid())
+  date         DateTime
+  libelle      String
+  type         EcritureType
+  montant      Float
+  categorie    String
+  pieceJointeUrl String?
+  residenceId  String
+  createdAt    DateTime     @default(now())
+
+  residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+
+  @@index([residenceId])
+  @@map("ecritures_comptables")
 }
 
 model AuditLog {

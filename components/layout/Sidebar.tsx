@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, LayoutDashboard, Receipt, FileText } from "lucide-react";
+import { Building2, LayoutDashboard, Receipt, FileText, Vote } from "lucide-react";
 import { SyndicLogo } from "@/components/ui/SyndicLogo";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { isStaffRole } from "@/lib/rbac";
@@ -12,6 +12,7 @@ const STAFF_NAV = [
 
 const COPROPRIETAIRE_NAV = [
   { href: "/mes-charges", label: "Mes charges", icon: Receipt },
+  { href: "/mes-assemblees", label: "Mes assemblées", icon: Vote },
   { href: "/mes-documents", label: "Mes documents", icon: FileText },
 ];
 

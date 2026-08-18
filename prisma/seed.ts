@@ -112,6 +112,13 @@ async function main() {
     },
   });
 
+  await prisma.residenceAdmin.create({
+    data: { residenceId: residence1.id, userId: gestionnaire.id },
+  });
+  await prisma.residenceAdmin.create({
+    data: { residenceId: residence2.id, userId: conseilBenevole.id },
+  });
+
   const batimentA = await prisma.batiment.create({
     data: { nom: "Bâtiment A", nbEtages: 2, residenceId: residence1.id },
   });
@@ -264,6 +271,55 @@ async function main() {
       lotId: lotL1.id,
       montant: 2250,
       statut: "EN_ATTENTE",
+    },
+  });
+
+  const ag1 = await prisma.ag.create({
+    data: {
+      date: new Date("2026-06-15"),
+      lieu: "Hall d'entrée, Résidence Al Manar",
+      type: "ORDINAIRE",
+      statut: "CONVOQUEE",
+      convocationEnvoyee: true,
+      residenceId: residence1.id,
+    },
+  });
+
+  const resolution1 = await prisma.resolution.create({
+    data: {
+      titre: "Ravalement de façade",
+      description: "Approbation du devis de ravalement de façade pour un montant de 45 000 MAD.",
+      typeMajorite: "ART25",
+      ordre: 0,
+      agId: ag1.id,
+    },
+  });
+
+  await prisma.vote.create({
+    data: { resolutionId: resolution1.id, lotId: lotA101.id, userId: proprio1.id, valeur: "POUR" },
+  });
+  await prisma.vote.create({
+    data: { resolutionId: resolution1.id, lotId: lotA102.id, userId: gestionnaire.id, valeur: "CONTRE" },
+  });
+
+  await prisma.ecritureComptable.create({
+    data: {
+      date: new Date("2026-03-05"),
+      libelle: "Contrat gardiennage T1",
+      type: "DEPENSE",
+      montant: 6000,
+      categorie: "Gardiennage",
+      residenceId: residence1.id,
+    },
+  });
+  await prisma.ecritureComptable.create({
+    data: {
+      date: new Date("2026-04-02"),
+      libelle: "Charges perçues T1 (lot A101)",
+      type: "RECETTE",
+      montant: 2400,
+      categorie: "Charges perçues",
+      residenceId: residence1.id,
     },
   });
 

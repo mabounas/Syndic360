@@ -9,6 +9,7 @@ import { NewResidenceForm } from "./NewResidenceForm";
 export default async function ResidencesPage() {
   const session = await requireSession();
   if (!isStaffRole(session.role)) redirect("/mes-charges");
+  const canCreate = ["SUPER_ADMIN", "SYNDIC_ADMIN"].includes(session.role);
 
   const residences = await prisma.residence.findMany({
     where: residenceScopeWhere(session),
@@ -20,7 +21,7 @@ export default async function ResidencesPage() {
     <div className="space-y-6">
       <Header title="Résidences" />
 
-      <NewResidenceForm />
+      {canCreate && <NewResidenceForm />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {residences.map((residence) => (

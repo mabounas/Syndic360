@@ -26,6 +26,7 @@ export type QuotePartRow = {
   statut: "PAYE" | "EN_ATTENTE" | "EN_RETARD";
   datePaiement: Date | null;
   lot: { numero: string };
+  relances: { id: string; type: string; envoyeeAt: Date }[];
 };
 
 export type AppelWithQuoteParts = {
@@ -43,6 +44,41 @@ export type BudgetWithAppels = {
   montantTotal: number;
   fondsTravauxMin: number;
   appelsCharges: AppelWithQuoteParts[];
+};
+
+export type VoteRow = {
+  id: string;
+  lotId: string;
+  valeur: "POUR" | "CONTRE" | "ABSTENTION";
+};
+
+export type ResolutionRow = {
+  id: string;
+  titre: string;
+  description: string;
+  typeMajorite: "ART24" | "ART25" | "ART26";
+  ordre: number;
+  votes: VoteRow[];
+};
+
+export type AgRow = {
+  id: string;
+  date: Date;
+  lieu: string;
+  type: "ORDINAIRE" | "EXTRAORDINAIRE";
+  statut: "PLANIFIEE" | "CONVOQUEE" | "CLOTUREE";
+  convocationEnvoyee: boolean;
+  resolutions: ResolutionRow[];
+};
+
+export type EcritureRow = {
+  id: string;
+  date: Date;
+  libelle: string;
+  type: "RECETTE" | "DEPENSE";
+  montant: number;
+  categorie: string;
+  pieceJointeUrl: string | null;
 };
 
 export type DocumentRow = {

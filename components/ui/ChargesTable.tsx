@@ -11,6 +11,7 @@ export type ChargeRow = {
   montant: number;
   statut: "PAYE" | "EN_ATTENTE" | "EN_RETARD";
   datePaiement: string | null;
+  relanceCount?: number;
 };
 
 const NEXT_STATUS: Record<ChargeRow["statut"], ChargeRow["statut"]> = {
@@ -36,6 +37,13 @@ export function ChargesTable({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ statut: NEXT_STATUS[row.statut] }),
     });
+    setPendingId(null);
+    router.refresh();
+  }
+
+  async function sendRelance(row: ChargeRow) {
+    setPendingId(row.id);
+    await fetch(`/api/quote-parts/${row.id}/relances`, { method: "POST" });
     setPendingId(null);
     router.refresh();
   }
@@ -72,7 +80,7 @@ export function ChargesTable({
                   : "—"}
               </td>
               {editable && (
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
                     onClick={() => toggleStatus(row)}
                     disabled={pendingId === row.id}
@@ -80,6 +88,16 @@ export function ChargesTable({
                   >
                     {row.statut === "PAYE" ? "Annuler paiement" : "Marquer payé"}
                   </button>
+                  {row.statut === "EN_RETARD" && (
+                    <button
+                      onClick={() => sendRelance(row)}
+                      disabled={pendingId === row.id}
+                      className="ml-3 text-sm text-warning hover:underline disabled:opacity-50"
+                      title="Enregistre une relance (envoi email/SMS réel à venir)"
+                    >
+                      Relancer{row.relanceCount ? ` (${row.relanceCount})` : ""}
+                    </button>
+                  )}
                 </td>
               )}
             </tr>

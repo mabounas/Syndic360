@@ -71,6 +71,38 @@ export const quotePartUpdateSchema = z.object({
 });
 export type QuotePartUpdateInput = z.infer<typeof quotePartUpdateSchema>;
 
+export const agSchema = z.object({
+  residenceId: z.string().min(1),
+  date: z.string().min(1, "Date requise"),
+  lieu: z.string().min(1, "Lieu requis"),
+  type: z.enum(["ORDINAIRE", "EXTRAORDINAIRE"]),
+});
+export type AgInput = z.infer<typeof agSchema>;
+
+export const resolutionSchema = z.object({
+  titre: z.string().min(1, "Titre requis"),
+  description: z.string().min(1, "Description requise"),
+  typeMajorite: z.enum(["ART24", "ART25", "ART26"]),
+});
+export type ResolutionInput = z.infer<typeof resolutionSchema>;
+
+export const voteSchema = z.object({
+  lotId: z.string().min(1),
+  valeur: z.enum(["POUR", "CONTRE", "ABSTENTION"]),
+});
+export type VoteInput = z.infer<typeof voteSchema>;
+
+export const ecritureSchema = z.object({
+  residenceId: z.string().min(1),
+  date: z.string().min(1, "Date requise"),
+  libelle: z.string().min(1, "Libellé requis"),
+  type: z.enum(["RECETTE", "DEPENSE"]),
+  montant: z.coerce.number().min(0),
+  categorie: z.string().min(1, "Catégorie requise"),
+  pieceJointeUrl: z.string().optional(),
+});
+export type EcritureInput = z.infer<typeof ecritureSchema>;
+
 export const documentSchema = z.object({
   residenceId: z.string().min(1),
   lotId: z.string().optional(),
