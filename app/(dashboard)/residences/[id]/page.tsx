@@ -7,6 +7,7 @@ import { BatimentsSection } from "./BatimentsSection";
 import { FinanceSection } from "./FinanceSection";
 import { DocumentsSection } from "./DocumentsSection";
 import { AdminsSection } from "./AdminsSection";
+import { ImportSection } from "./ImportSection";
 import { AgSection } from "./AgSection";
 import { ComptabiliteSection } from "./ComptabiliteSection";
 
@@ -79,6 +80,7 @@ export default async function ResidenceDetailPage({
         candidates={candidates}
         canManage={canManageAdmins}
       />
+      <ImportSection residenceId={residence.id} />
       <BatimentsSection residenceId={residence.id} batiments={residence.batiments} />
       <FinanceSection residenceId={residence.id} budgets={residence.budgets} />
       <AgSection residenceId={residence.id} assemblees={residence.assemblees} lots={allLots} />
