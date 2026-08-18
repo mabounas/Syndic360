@@ -7,7 +7,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   organisationNom: z.string().min(2, "Nom d'organisation trop court"),
-  plan: z.enum(["BENEVOLE", "STARTER", "PRO"]),
+  plan: z.enum(["BENEVOLE", "PRO"]),
   nom: z.string().min(1, "Nom requis"),
   prenom: z.string().min(1, "Prénom requis"),
   email: z.email("Adresse email invalide"),

@@ -6,8 +6,18 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 // publiques mais redirigent vers le tableau de bord si déjà connecté.
 const PUBLIC_ONLY_WHEN_LOGGED_OUT = ["/login", "/register"];
 
+// Fichiers statiques servis depuis /public (images, favicons, etc.) — jamais
+// derrière l'authentification, y compris pour les requêtes internes de
+// l'optimiseur d'images Next.js.
+const STATIC_FILE_PATTERN = /\.[a-zA-Z0-9]+$/;
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (STATIC_FILE_PATTERN.test(pathname)) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySession(token) : null;
 

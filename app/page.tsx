@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Check,
@@ -55,27 +56,19 @@ const HIGHLIGHTS = [
 const PLANS = [
   {
     name: "Bénévole",
-    price: "Gratuit",
-    unit: "",
+    price: "20 MAD",
+    unit: "/ lot / mois",
     tagline: "Pour un conseil syndical gérant sa propre résidence.",
-    items: ["1 résidence, jusqu'à 50 lots", "Comptabilité & appels de charges", "Assemblées générales en ligne", "Espace copropriétaire"],
+    items: ["1 résidence", "Comptabilité & appels de charges", "Assemblées générales en ligne", "Espace copropriétaire"],
     highlighted: false,
-  },
-  {
-    name: "Starter",
-    price: "490 MAD",
-    unit: "/ mois",
-    tagline: "Pour un petit cabinet de syndic.",
-    items: ["Jusqu'à 5 résidences, 500 lots", "Toutes les fonctionnalités", "GED 20 Go", "Support par email"],
-    highlighted: true,
   },
   {
     name: "Pro",
-    price: "1 490 MAD",
-    unit: "/ mois",
+    price: "10 MAD",
+    unit: "/ lot / mois",
     tagline: "Pour un cabinet gérant plusieurs résidences.",
-    items: ["Jusqu'à 30 résidences, lots illimités", "GED 100 Go", "Support téléphonique"],
-    highlighted: false,
+    items: ["Jusqu'à 2 résidences", "Minimum 500 lots facturés", "Toutes les fonctionnalités", "Support prioritaire"],
+    highlighted: true,
   },
 ];
 
@@ -130,7 +123,7 @@ export default function LandingPage() {
               href="/register"
               className="rounded-full bg-secondary px-7 py-4 text-base font-bold text-white shadow-lg shadow-secondary/30 transition hover:bg-secondary-dark"
             >
-              Créer mon compte gratuitement
+              Créer mon compte
             </Link>
             <a href="#tarifs" className="flex items-center gap-1.5 text-base font-semibold text-text-primary hover:text-primary">
               Voir les tarifs
@@ -140,25 +133,15 @@ export default function LandingPage() {
         </div>
 
         <div className="relative">
-          <div className="rounded-[20px] border border-border bg-bg-card p-7 shadow-xl">
-            <div className="mb-5 flex items-center justify-between">
-              <span className="text-sm font-bold text-text-primary">Résidence Al Manar</span>
-              <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">À jour</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between rounded-xl bg-bg-page px-4 py-3.5">
-                <span className="text-sm text-text-secondary">Appels de charges T3 2026</span>
-                <span className="text-sm font-bold text-text-primary">18 400 MAD</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-bg-page px-4 py-3.5">
-                <span className="text-sm text-text-secondary">Prochaine AG</span>
-                <span className="text-sm font-bold text-text-primary">12 mars 2027</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-bg-page px-4 py-3.5">
-                <span className="text-sm text-text-secondary">Ravalement de façade — validé</span>
-                <Check size={16} className="text-success" />
-              </div>
-            </div>
+          <div className="overflow-hidden rounded-[20px] border border-border bg-bg-card shadow-xl">
+            <Image
+              src="/hero-syndic.jpg"
+              alt="Gestion de syndic de copropriété"
+              width={474}
+              height={166}
+              className="h-auto w-full object-cover"
+              priority
+            />
           </div>
           <div className="absolute -bottom-6 -left-6 rounded-2xl bg-primary px-5 py-4 text-white shadow-xl">
             <div className="text-xl font-bold">Art. 24 · 25 · 26</div>
@@ -210,7 +193,7 @@ export default function LandingPage() {
           <h2 className="mt-3 mb-4 text-3xl font-bold text-text-primary">Un plan pour chaque syndic</h2>
           <p className="text-text-secondary">Sans engagement, résiliable à tout moment.</p>
         </div>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-2xl gap-6 sm:grid-cols-2">
           {PLANS.map((plan) => (
             <div
               key={plan.name}
@@ -259,10 +242,6 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
-        <p className="mt-8 text-center text-sm text-text-secondary">
-          Grand cabinet, plus de 30 résidences ?{" "}
-          <span className="font-semibold text-text-primary">Tarif Enterprise sur devis.</span>
-        </p>
       </section>
 
       {/* FAQ */}
@@ -282,7 +261,7 @@ export default function LandingPage() {
           Prêt à simplifier la gestion de vos résidences ?
         </h2>
         <p className="mb-8 text-white/70">
-          Créez votre compte en quelques minutes — gratuit pour les syndics bénévoles.
+          Créez votre compte en quelques minutes, à partir de 10 Dhs par lot et par mois.
         </p>
         <Link
           href="/register"

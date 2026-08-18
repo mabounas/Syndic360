@@ -113,9 +113,8 @@ export function RegisterForm() {
           className="w-full rounded-[var(--radius-button)] border border-border px-3 py-2 text-sm outline-none focus:border-primary"
           {...register("plan")}
         >
-          <option value="BENEVOLE">Syndic bénévole (gratuit, 1 résidence)</option>
-          <option value="STARTER">Cabinet professionnel (Starter)</option>
-          <option value="PRO">Cabinet professionnel (Pro)</option>
+          <option value="BENEVOLE">Syndic bénévole (20 Dhs/lot, 1 résidence)</option>
+          <option value="PRO">Cabinet professionnel Pro (10 Dhs/lot, min. 500 lots)</option>
         </select>
       </div>
 

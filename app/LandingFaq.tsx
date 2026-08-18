@@ -13,7 +13,7 @@ const FAQS = [
   },
   {
     q: "Peut-on utiliser Syndic360 sans être syndic professionnel ?",
-    a: "Oui. Le plan Bénévole gratuit est pensé pour les conseils syndicaux non-professionnels qui gèrent leur propre résidence.",
+    a: "Oui. Le plan Bénévole (20 Dhs/lot/mois, 1 résidence) est pensé pour les conseils syndicaux non-professionnels qui gèrent leur propre résidence.",
   },
   {
     q: "Comment sont réparties les charges entre les lots ?",
