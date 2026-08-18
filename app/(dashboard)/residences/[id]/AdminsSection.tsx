@@ -6,6 +6,13 @@ import { UserMinus, UserPlus } from "lucide-react";
 
 type StaffUser = { id: string; nom: string; prenom: string; email: string; role: string };
 
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super admin",
+  SYNDIC_ADMIN: "Syndic admin",
+  GESTIONNAIRE: "Gestionnaire",
+  CONSEIL_BENEVOLE: "Conseil bénévole",
+};
+
 export function AdminsSection({
   residenceId,
   admins,
@@ -53,7 +60,7 @@ export function AdminsSection({
             <span className="text-text-primary">
               {admin.prenom} {admin.nom}{" "}
               <span className="text-text-secondary">
-                · {admin.email} · {admin.role === "GESTIONNAIRE" ? "Gestionnaire" : "Conseil bénévole"}
+                · {admin.email} · {ROLE_LABELS[admin.role] ?? admin.role}
               </span>
             </span>
             {canManage && (
