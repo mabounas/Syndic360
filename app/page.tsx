@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight,
-  Check,
   FileText,
   LayoutDashboard,
   Upload,
@@ -11,6 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { SyndicLogo } from "@/components/ui/SyndicLogo";
+import { PricingCards, type PricingPlan } from "@/components/ui/PricingCards";
 import { LandingFaq } from "./LandingFaq";
 
 const FEATURES = [
@@ -53,22 +53,22 @@ const HIGHLIGHTS = [
   { label: "Excel", caption: "Import en masse des lots & copropriétaires" },
 ];
 
-const PLANS = [
+const PLANS: PricingPlan[] = [
   {
     name: "Bénévole",
-    price: "20 MAD",
+    price: 20,
     unit: "/ lot / mois",
     tagline: "Pour un conseil syndical gérant sa propre résidence.",
     items: ["1 résidence", "Comptabilité & appels de charges", "Assemblées générales en ligne", "Espace copropriétaire"],
-    highlighted: false,
   },
   {
     name: "Pro",
-    price: "10 MAD",
+    price: 10,
     unit: "/ lot / mois",
     tagline: "Pour un cabinet gérant plusieurs résidences.",
     items: ["Jusqu'à 2 résidences", "Minimum 500 lots facturés", "Toutes les fonctionnalités", "Support prioritaire"],
     highlighted: true,
+    badge: "Populaire",
   },
 ];
 
@@ -193,55 +193,7 @@ export default function LandingPage() {
           <h2 className="mt-3 mb-4 text-3xl font-bold text-text-primary">Un plan pour chaque syndic</h2>
           <p className="text-text-secondary">Sans engagement, résiliable à tout moment.</p>
         </div>
-        <div className="mx-auto grid max-w-2xl gap-6 sm:grid-cols-2">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`flex flex-col rounded-[20px] border p-8 ${
-                plan.highlighted ? "border-primary bg-primary text-white" : "border-border bg-bg-card"
-              }`}
-            >
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-lg font-bold">{plan.name}</span>
-                {plan.highlighted && (
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-white">
-                    Populaire
-                  </span>
-                )}
-              </div>
-              <div className="mb-1 mt-3 flex items-baseline gap-1.5">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className={`text-sm ${plan.highlighted ? "text-white/70" : "text-text-secondary"}`}>
-                  {plan.unit}
-                </span>
-              </div>
-              <p className={`mb-6 text-sm ${plan.highlighted ? "text-white/80" : "text-text-secondary"}`}>
-                {plan.tagline}
-              </p>
-              <div className="mb-8 flex flex-col gap-3">
-                {plan.items.map((item) => (
-                  <div key={item} className="flex items-start gap-2.5 text-sm">
-                    <Check
-                      size={16}
-                      className={`mt-0.5 flex-shrink-0 ${plan.highlighted ? "text-secondary" : "text-success"}`}
-                    />
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/register"
-                className={`mt-auto rounded-full py-3 text-center text-sm font-bold ${
-                  plan.highlighted
-                    ? "bg-secondary text-white hover:bg-secondary-dark"
-                    : "bg-primary/10 text-primary hover:bg-primary/20"
-                }`}
-              >
-                Choisir {plan.name}
-              </Link>
-            </div>
-          ))}
-        </div>
+        <PricingCards plans={PLANS} />
       </section>
 
       {/* FAQ */}
