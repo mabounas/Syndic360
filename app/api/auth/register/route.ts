@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { registerSchema } from "@/lib/validation";
 import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE, signSession } from "@/lib/session";
+import { sendAccountPendingEmail } from "@/lib/email";
 
 // Auto-inscription réservée à un nouveau syndic (professionnel ou bénévole) créant
 // son organisation. Les copropriétaires sont ajoutés par leur syndic depuis le
@@ -40,11 +41,14 @@ export async function POST(request: Request) {
         nom,
         prenom,
         role: "SYNDIC_ADMIN",
+        statut: "EN_ATTENTE",
         organisationId: organisation.id,
       },
     });
     return { organisation, user };
   });
+
+  await sendAccountPendingEmail(user.email, user.prenom, organisationNom);
 
   const token = await signSession({
     sub: user.id,

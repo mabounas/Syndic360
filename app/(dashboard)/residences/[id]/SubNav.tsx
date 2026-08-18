@@ -14,6 +14,7 @@ export function SubNav({ residenceId }: { residenceId: string }) {
     { href: `${base}/assemblees`, label: "Assemblées" },
     { href: `${base}/comptabilite`, label: "Comptabilité" },
     { href: `${base}/documents`, label: "Documents" },
+    { href: `${base}/residents`, label: "Résidents" },
     { href: `${base}/administrateurs`, label: "Administrateurs" },
   ];
 

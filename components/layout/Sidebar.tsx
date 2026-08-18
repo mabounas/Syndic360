@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, LayoutDashboard, Receipt, FileText, Vote } from "lucide-react";
+import { Building2, LayoutDashboard, Receipt, FileText, Vote, ShieldCheck } from "lucide-react";
 import { SyndicLogo } from "@/components/ui/SyndicLogo";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { isStaffRole } from "@/lib/rbac";
@@ -8,6 +8,12 @@ import type { Role } from "@/app/generated/prisma/enums";
 const STAFF_NAV = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/residences", label: "Résidences", icon: Building2 },
+];
+
+const SUPER_ADMIN_NAV = [
+  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/residences", label: "Résidences", icon: Building2 },
+  { href: "/approbations", label: "Approbations", icon: ShieldCheck },
 ];
 
 const COPROPRIETAIRE_NAV = [
@@ -25,7 +31,7 @@ export function Sidebar({
   nom: string;
   prenom: string;
 }) {
-  const items = isStaffRole(role) ? STAFF_NAV : COPROPRIETAIRE_NAV;
+  const items = role === "SUPER_ADMIN" ? SUPER_ADMIN_NAV : isStaffRole(role) ? STAFF_NAV : COPROPRIETAIRE_NAV;
 
   return (
     <aside className="flex h-screen w-64 flex-shrink-0 flex-col bg-bg-sidebar text-white">

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, hashPassword } from "@/lib/auth";
+import { getSession, hashPassword, unclaimedPasswordHash } from "@/lib/auth";
 import { assertLotAccess, handleApiError, requireStaffRole } from "@/lib/rbac";
 import { assignProprietaireSchema } from "@/lib/validation";
 
-// Ajoute un copropriétaire à un lot. Crée le compte utilisateur (pas d'auto-inscription
-// publique pour ce rôle — c'est le syndic qui provisionne l'accès de ses copropriétaires).
+// Ajoute un copropriétaire/locataire à un lot. Si un mot de passe est fourni,
+// le compte est immédiatement utilisable (approuvé — vetté en personne par le
+// syndic). Sinon, le compte est créé sans mot de passe utilisable : le résident
+// devra l'activer lui-même via /activer-mon-compte (vérification nom/prénom/email),
+// après quoi il reste en attente d'approbation de l'admin de résidence.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -37,7 +40,10 @@ export async function POST(
       );
     }
 
-    const passwordHash = await hashPassword(parsed.data.password);
+    const hasPassword = !!parsed.data.password;
+    const passwordHash = hasPassword
+      ? await hashPassword(parsed.data.password!)
+      : await unclaimedPasswordHash();
 
     const user = await prisma.user.create({
       data: {
@@ -46,6 +52,8 @@ export async function POST(
         prenom: parsed.data.prenom,
         telephone: parsed.data.telephone || undefined,
         passwordHash,
+        passwordSet: hasPassword,
+        statut: hasPassword ? "APPROUVE" : "EN_ATTENTE",
         role: "COPROPRIETAIRE",
         organisationId: session.organisationId,
       },
@@ -56,7 +64,7 @@ export async function POST(
     });
 
     return NextResponse.json(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, passwordSet: hasPassword },
       { status: 201 }
     );
   } catch (error) {

@@ -1,17 +1,14 @@
-import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, hashPassword } from "@/lib/auth";
+import { getSession, unclaimedPasswordHash } from "@/lib/auth";
 import { assertResidenceAccess, handleApiError, requireStaffRole } from "@/lib/rbac";
 import { parseResidentsWorkbook } from "@/lib/excel";
-
-function generateTempPassword() {
-  return randomBytes(9).toString("base64url"); // ~12 caractères, lisible sans ambiguïté
-}
 
 // Import en masse des lots + copropriétaires d'une résidence depuis un fichier
 // Excel (section 6.2 du CDC : "Import CSV/Excel d'une résidence existante").
 // Traite chaque ligne indépendamment : une ligne en erreur n'annule pas les autres.
+// Les comptes copropriétaires importés n'ont pas de mot de passe utilisable —
+// chaque résident active lui-même son compte via /activer-mon-compte.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -43,7 +40,7 @@ export async function POST(
 
     let lotsCreated = 0;
     let proprietairesLinked = 0;
-    const usersCreated: { email: string; password: string }[] = [];
+    const usersCreated: { email: string }[] = [];
     const rowErrors: { line: number; message: string }[] = [...parseErrors];
 
     for (const row of rows) {
@@ -74,11 +71,12 @@ export async function POST(
         if (row.proprietaireEmail) {
           let user = await prisma.user.findUnique({ where: { email: row.proprietaireEmail } });
           if (!user) {
-            const password = generateTempPassword();
             user = await prisma.user.create({
               data: {
                 email: row.proprietaireEmail,
-                passwordHash: await hashPassword(password),
+                passwordHash: await unclaimedPasswordHash(),
+                passwordSet: false,
+                statut: "EN_ATTENTE",
                 nom: row.proprietaireNom ?? "",
                 prenom: row.proprietairePrenom ?? "",
                 telephone: row.proprietaireTelephone ?? undefined,
@@ -86,7 +84,7 @@ export async function POST(
                 organisationId: session.organisationId,
               },
             });
-            usersCreated.push({ email: user.email, password });
+            usersCreated.push({ email: user.email });
           } else if (user.organisationId !== session.organisationId) {
             rowErrors.push({
               line: row.line,

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../app/generated/prisma/client";
@@ -153,7 +154,7 @@ async function main() {
     },
   });
 
-  await prisma.lot.create({
+  const lotA201 = await prisma.lot.create({
     data: {
       numero: "A201",
       type: "APPARTEMENT",
@@ -212,6 +213,25 @@ async function main() {
   });
   await prisma.lotProprietaire.create({
     data: { lotId: lotL1.id, userId: proprio3.id },
+  });
+
+  // Démo du flux d'auto-activation : compte pré-enregistré sans mot de passe
+  // utilisable, à activer via /activer-mon-compte (prénom Nadia, nom Berrada,
+  // email proprio4@syndic360.ma — vérifier ces informations exactement).
+  const proprio4Pending = await prisma.user.create({
+    data: {
+      email: "proprio4@syndic360.ma",
+      passwordHash: await bcrypt.hash(randomUUID(), 10),
+      passwordSet: false,
+      statut: "EN_ATTENTE",
+      nom: "Berrada",
+      prenom: "Nadia",
+      role: "COPROPRIETAIRE",
+      organisationId: orgCabinet.id,
+    },
+  });
+  await prisma.lotProprietaire.create({
+    data: { lotId: lotA201.id, userId: proprio4Pending.id },
   });
 
   const budget1 = await prisma.budget.create({
@@ -329,6 +349,22 @@ async function main() {
     },
   });
 
+  // Démo du flux d'approbation SuperAdmin : nouvelle organisation en attente.
+  const orgEnAttente = await prisma.organisation.create({
+    data: { nom: "Cabinet Nouveau Syndic", plan: "STARTER" },
+  });
+  const syndicAdminPending = await prisma.user.create({
+    data: {
+      email: "nouveau-syndic@syndic360.ma",
+      passwordHash,
+      nom: "Fassi",
+      prenom: "Younes",
+      role: "SYNDIC_ADMIN",
+      statut: "EN_ATTENTE",
+      organisationId: orgEnAttente.id,
+    },
+  });
+
   console.log("Seed terminé.");
   console.log("Comptes de démo (mot de passe pour tous : %s)", DEMO_PASSWORD);
   console.log("  SUPER_ADMIN       :", superAdmin.email, "(toutes organisations)");
@@ -337,6 +373,16 @@ async function main() {
   console.log("  COPROPRIETAIRE 1  :", proprio1.email, "(lot A101, Al Manar)");
   console.log("  COPROPRIETAIRE 2  :", proprio2.email, "(lot A102, Al Manar)");
   console.log("  COPROPRIETAIRE 3  :", proprio3.email, "(lot L1, Les Palmiers)");
+  console.log(
+    "  COPROPRIETAIRE 4  :",
+    proprio4Pending.email,
+    "(lot A201, en attente — activer via /activer-mon-compte avec prénom Nadia, nom Berrada)"
+  );
+  console.log(
+    "  SYNDIC_ADMIN (en attente) :",
+    syndicAdminPending.email,
+    "— à approuver dans /approbations en tant que superadmin"
+  );
 }
 
 main()

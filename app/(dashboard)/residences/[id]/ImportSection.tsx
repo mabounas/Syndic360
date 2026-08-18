@@ -7,7 +7,7 @@ import { Download, Upload } from "lucide-react";
 type ImportResult = {
   lotsCreated: number;
   proprietairesLinked: number;
-  usersCreated: { email: string; password: string }[];
+  usersCreated: { email: string }[];
   errors: { line: number; message: string }[];
 };
 
@@ -60,7 +60,8 @@ export function ImportSection({ residenceId }: { residenceId: string }) {
       <p className="text-sm text-text-secondary">
         Remplissez le modèle (une ligne par lot) puis importez-le. Les bâtiments sont créés
         automatiquement s&apos;ils n&apos;existent pas encore ; un compte copropriétaire est créé
-        pour chaque email non reconnu, avec un mot de passe temporaire à communiquer.
+        pour chaque email non reconnu — chaque résident active ensuite lui-même son compte via{" "}
+        <span className="font-medium">/activer-mon-compte</span>.
       </p>
 
       <label
@@ -97,18 +98,13 @@ export function ImportSection({ residenceId }: { residenceId: string }) {
           {result.usersCreated.length > 0 && (
             <div>
               <p className="mb-1 font-medium text-text-primary">
-                Nouveaux comptes créés — communiquez ces mots de passe temporaires :
+                Nouveaux comptes créés (à activer par chacun via /activer-mon-compte) :
               </p>
-              <table className="w-full text-xs">
-                <tbody>
-                  {result.usersCreated.map((u) => (
-                    <tr key={u.email} className="border-b border-border last:border-0">
-                      <td className="py-1 pr-4 text-text-primary">{u.email}</td>
-                      <td className="py-1 font-mono text-text-secondary">{u.password}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <ul className="list-inside list-disc text-text-secondary">
+                {result.usersCreated.map((u) => (
+                  <li key={u.email}>{u.email}</li>
+                ))}
+              </ul>
             </div>
           )}
 

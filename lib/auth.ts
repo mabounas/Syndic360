@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
@@ -6,6 +7,11 @@ import { SESSION_COOKIE, type SessionPayload, verifySession } from "@/lib/sessio
 
 export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
+}
+
+/** Hash inutilisable pour un compte pas encore activé par son titulaire (passwordSet=false). */
+export function unclaimedPasswordHash(): Promise<string> {
+  return bcrypt.hash(randomBytes(32).toString("hex"), 10);
 }
 
 export function verifyPassword(
@@ -33,6 +39,6 @@ export async function requireSession(): Promise<SessionPayload> {
 /** Exige une session avec un des rôles autorisés ; renvoie vers le tableau de bord sinon. */
 export async function requireRole(...roles: Role[]): Promise<SessionPayload> {
   const session = await requireSession();
-  if (!roles.includes(session.role)) redirect("/");
+  if (!roles.includes(session.role)) redirect("/dashboard");
   return session;
 }

@@ -84,6 +84,12 @@ export function LoginForm() {
           Créer mon organisation
         </Link>
       </p>
+      <p className="text-center text-sm text-text-secondary">
+        Vous êtes copropriétaire et n&apos;avez pas encore de mot de passe ?{" "}
+        <Link href="/activer-mon-compte" className="text-primary hover:underline">
+          Activer mon compte
+        </Link>
+      </p>
     </form>
   );
 }

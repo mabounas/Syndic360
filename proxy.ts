@@ -4,7 +4,7 @@ import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
 // "/" est la page publique (landing marketing) ; /login et /register sont
 // publiques mais redirigent vers le tableau de bord si déjà connecté.
-const PUBLIC_ONLY_WHEN_LOGGED_OUT = ["/login", "/register"];
+const PUBLIC_ONLY_WHEN_LOGGED_OUT = ["/login", "/register", "/activer-mon-compte"];
 
 // Fichiers statiques servis depuis /public (images, favicons, etc.) — jamais
 // derrière l'authentification, y compris pour les requêtes internes de

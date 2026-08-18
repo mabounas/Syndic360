@@ -341,9 +341,8 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
         <option value="LOCATAIRE">Locataire</option>
       </select>
       <input
-        required
         type="password"
-        placeholder="Mot de passe temporaire"
+        placeholder="Mot de passe (optionnel)"
         value={form.password}
         onChange={(e) => setForm({ ...form, password: e.target.value })}
         className="w-48 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
@@ -362,6 +361,10 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
       >
         Annuler
       </button>
+      <p className="w-full text-xs text-text-secondary">
+        Laissez le mot de passe vide pour que la personne active elle-même son compte sur{" "}
+        <span className="font-medium">/activer-mon-compte</span> (vérification nom, prénom, email).
+      </p>
       {error && <p className="w-full text-sm text-danger">{error}</p>}
     </form>
   );

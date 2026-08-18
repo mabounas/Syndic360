@@ -84,6 +84,17 @@ enum EcritureType {
   DEPENSE
 }
 
+// EN_ATTENTE : SYNDIC_ADMIN en attente d'approbation SuperAdmin, ou
+// copropriétaire ayant activé son compte en attente d'approbation par
+// l'admin de sa résidence. APPROUVE : accès complet. REJETE/BLOQUE :
+// aucun accès (distinction : jamais approuvé vs. approuvé puis suspendu).
+enum UserStatut {
+  EN_ATTENTE
+  APPROUVE
+  REJETE
+  BLOQUE
+}
+
 model Organisation {
   id        String   @id @default(cuid())
   nom       String
@@ -104,6 +115,8 @@ model User {
   prenom         String
   telephone      String?
   role           Role
+  statut         UserStatut @default(APPROUVE)
+  passwordSet    Boolean    @default(true)
   organisationId String
   createdAt      DateTime @default(now())
 

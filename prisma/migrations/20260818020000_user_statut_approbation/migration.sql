@@ -1,0 +1,6 @@
+-- CreateEnum
+CREATE TYPE "UserStatut" AS ENUM ('EN_ATTENTE', 'APPROUVE', 'REJETE', 'BLOQUE');
+
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN "statut" "UserStatut" NOT NULL DEFAULT 'APPROUVE';
+ALTER TABLE "users" ADD COLUMN "passwordSet" BOOLEAN NOT NULL DEFAULT true;

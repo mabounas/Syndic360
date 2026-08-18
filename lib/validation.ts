@@ -54,9 +54,17 @@ export const assignProprietaireSchema = z.object({
   prenom: z.string().min(1, "Prénom requis"),
   telephone: z.string().optional(),
   typeOccupant: z.enum(["PROPRIETAIRE", "LOCATAIRE"]),
-  password: z.string().min(8, "8 caractères minimum"),
+  password: z.union([z.string().min(8, "8 caractères minimum"), z.literal("")]).optional(),
 });
 export type AssignProprietaireInput = z.infer<typeof assignProprietaireSchema>;
+
+export const activerCompteSchema = z.object({
+  prenom: z.string().min(1, "Prénom requis"),
+  nom: z.string().min(1, "Nom requis"),
+  email: z.email("Adresse email invalide"),
+  password: z.string().min(8, "8 caractères minimum"),
+});
+export type ActiverCompteInput = z.infer<typeof activerCompteSchema>;
 
 export const budgetSchema = z.object({
   residenceId: z.string().min(1),
