@@ -18,8 +18,27 @@ export function StatutActions({ userId, statut }: { userId: string; statut: stri
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (
+      !window.confirm(
+        "Supprimer définitivement ce compte administrateur ? Cette action est irréversible."
+      )
+    ) {
+      return;
+    }
+    setPending(true);
+    const res = await fetch(`/api/super-admin/users/${userId}/statut`, { method: "DELETE" });
+    setPending(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      window.alert(body?.error ?? "Erreur lors de la suppression.");
+      return;
+    }
+    router.refresh();
+  }
+
   return (
-    <div className="flex gap-3 text-sm">
+    <div className="flex flex-wrap gap-3 text-sm">
       {statut !== "APPROUVE" && (
         <button disabled={pending} onClick={() => setStatut("APPROUVE")} className="font-medium text-success hover:underline disabled:opacity-50">
           Approuver
@@ -32,7 +51,12 @@ export function StatutActions({ userId, statut }: { userId: string; statut: stri
       )}
       {statut === "APPROUVE" && (
         <button disabled={pending} onClick={() => setStatut("BLOQUE")} className="text-warning hover:underline disabled:opacity-50">
-          Bloquer
+          Désactiver
+        </button>
+      )}
+      {statut !== "APPROUVE" && (
+        <button disabled={pending} onClick={handleDelete} className="text-text-secondary hover:text-danger hover:underline disabled:opacity-50">
+          Supprimer
         </button>
       )}
     </div>

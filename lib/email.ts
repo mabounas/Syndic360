@@ -69,6 +69,19 @@ export function sendAccountRejectedEmail(to: string, prenom: string) {
   });
 }
 
+export function sendResidentPendingEmail(to: string, prenom: string, residenceNom: string) {
+  return sendEmail({
+    to,
+    subject: "Syndic360 — Votre compte est en attente d'approbation",
+    html: wrapper(
+      "Compte créé",
+      `<p>Bonjour ${prenom},</p>
+       <p>Votre compte copropriétaire pour la résidence <strong>${residenceNom}</strong> a bien été activé sur Syndic360.</p>
+       <p>Il est actuellement <strong>en attente d'approbation</strong> par l'administrateur de votre résidence. Vous recevrez un email dès que votre accès sera confirmé.</p>`
+    ),
+  });
+}
+
 export function sendResidentApprovedEmail(to: string, prenom: string, residenceNom: string) {
   return sendEmail({
     to,

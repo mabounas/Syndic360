@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { activerCompteSchema } from "@/lib/validation";
 import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE, signSession } from "@/lib/session";
+import { sendResidentPendingEmail } from "@/lib/email";
 
 const NO_MATCH_ERROR =
   "Aucun lot ne correspond à ces informations. Vérifiez votre saisie ou contactez votre syndic.";
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
     select: { lot: { select: { numero: true, batiment: { select: { residence: { select: { nom: true } } } } } } },
   });
   const residences = [...new Set(lots.map((l) => l.lot.batiment.residence.nom))];
+
+  await sendResidentPendingEmail(updated.email, updated.prenom, residences[0] ?? "");
 
   const token = await signSession({
     sub: updated.id,

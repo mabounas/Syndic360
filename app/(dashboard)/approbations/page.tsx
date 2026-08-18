@@ -9,7 +9,7 @@ const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
   EN_ATTENTE: { label: "En attente", className: "bg-warning/10 text-warning" },
   APPROUVE: { label: "Approuvé", className: "bg-success/10 text-success" },
   REJETE: { label: "Rejeté", className: "bg-danger/10 text-danger" },
-  BLOQUE: { label: "Bloqué", className: "bg-danger/10 text-danger" },
+  BLOQUE: { label: "Désactivé", className: "bg-danger/10 text-danger" },
 };
 
 export default async function ApprobationsPage() {
