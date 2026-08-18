@@ -6,8 +6,9 @@ import { assertResidenceAccess } from "@/lib/rbac";
 import { appelChargesSchema } from "@/lib/validation";
 
 // Crée un appel de charges et répartit le montant entre les lots de la résidence,
-// soit au prorata des tantièmes de charges, soit en forfait identique par lot —
-// pratique courante au Maroc pour les petits syndics (section 6.4 du CDC).
+// soit au prorata des tantièmes de charges, soit en forfait — chaque lot a alors
+// son propre montant forfaitaire (champ Lot.montantForfaitaire, souvent différent
+// selon le type de lot), pratique courante au Maroc (section 6.4 du CDC).
 export async function POST(request: Request) {
   try {
     const session = await getSession();
@@ -22,12 +23,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { repartition, montantTotal, montantParLot } = parsed.data;
+    const { repartition, montantTotal } = parsed.data;
     if (repartition === "TANTIEMES" && !montantTotal) {
       return NextResponse.json({ error: "Montant total requis." }, { status: 400 });
-    }
-    if (repartition === "FORFAIT" && !montantParLot) {
-      return NextResponse.json({ error: "Montant par lot requis." }, { status: 400 });
     }
 
     const budget = await prisma.budget.findUnique({
@@ -39,21 +37,29 @@ export async function POST(request: Request) {
 
     const lots = await prisma.lot.findMany({
       where: { batiment: { residenceId: budget!.residenceId } },
-      select: { id: true, tantiemesCharges: true },
+      select: { id: true, numero: true, tantiemesCharges: true, montantForfaitaire: true },
     });
     if (lots.length === 0) {
-      return NextResponse.json(
-        { error: "La résidence n'a aucun lot." },
-        { status: 422 }
-      );
+      return NextResponse.json({ error: "La résidence n'a aucun lot." }, { status: 422 });
     }
 
     let quotePartsData: { lotId: string; montant: number }[];
     let appelMontantTotal: number;
 
     if (repartition === "FORFAIT") {
-      appelMontantTotal = Math.round(montantParLot! * lots.length * 100) / 100;
-      quotePartsData = lots.map((lot) => ({ lotId: lot.id, montant: montantParLot! }));
+      const sansForfait = lots.filter((l) => l.montantForfaitaire == null);
+      if (sansForfait.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Montant forfaitaire manquant pour : ${sansForfait
+              .map((l) => l.numero)
+              .join(", ")}. Renseignez-le sur chaque lot avant de créer l'appel.`,
+          },
+          { status: 422 }
+        );
+      }
+      quotePartsData = lots.map((lot) => ({ lotId: lot.id, montant: lot.montantForfaitaire! }));
+      appelMontantTotal = Math.round(quotePartsData.reduce((s, q) => s + q.montant, 0) * 100) / 100;
     } else {
       const totalTantiemes = lots.reduce((sum, lot) => sum + lot.tantiemesCharges, 0);
       if (totalTantiemes === 0) {

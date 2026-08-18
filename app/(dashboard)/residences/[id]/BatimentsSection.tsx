@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus, Pencil } from "lucide-react";
 import type { BatimentWithLots, LotWithOwners } from "./types";
 
 const LOT_TYPES = [
@@ -11,6 +11,11 @@ const LOT_TYPES = [
   { value: "PARKING", label: "Parking" },
   { value: "CAVE", label: "Cave" },
 ] as const;
+
+const OCCUPANT_LABELS: Record<string, string> = {
+  PROPRIETAIRE: "Propriétaire",
+  LOCATAIRE: "Locataire",
+};
 
 function NewBatimentForm({ residenceId }: { residenceId: string }) {
   const router = useRouter();
@@ -91,6 +96,7 @@ function NewLotForm({ batimentId }: { batimentId: string }) {
     tantiemesGeneraux: "",
     tantiemesCharges: "",
     etage: "",
+    montantForfaitaire: "",
   });
 
   async function submit(e: React.FormEvent) {
@@ -107,6 +113,7 @@ function NewLotForm({ batimentId }: { batimentId: string }) {
         tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
         tantiemesCharges: Number(form.tantiemesCharges || 0),
         etage: form.etage ? Number(form.etage) : undefined,
+        montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
       }),
     });
     setPending(false);
@@ -175,6 +182,13 @@ function NewLotForm({ batimentId }: { batimentId: string }) {
         onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
         className="w-32 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
+      <input
+        placeholder="Montant forfaitaire (MAD)"
+        type="number"
+        value={form.montantForfaitaire}
+        onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
+        className="w-40 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+      />
       <button
         type="submit"
         disabled={pending}
@@ -193,12 +207,70 @@ function NewLotForm({ batimentId }: { batimentId: string }) {
   );
 }
 
+function EditForfaitForm({ lotId, montantForfaitaire }: { lotId: string; montantForfaitaire: number | null }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [value, setValue] = useState(montantForfaitaire?.toString() ?? "");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    await fetch(`/api/lots/${lotId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ montantForfaitaire: Number(value || 0) }),
+    });
+    setPending(false);
+    setOpen(false);
+    router.refresh();
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 text-text-secondary hover:text-primary"
+        title="Modifier le montant forfaitaire"
+      >
+        {montantForfaitaire !== null ? `${montantForfaitaire} MAD/forfait` : "Forfait non défini"}
+        <Pencil size={11} />
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex items-center gap-1">
+      <input
+        autoFocus
+        type="number"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-24 rounded-[var(--radius-button)] border border-border px-1.5 py-0.5 text-xs outline-none focus:border-primary"
+      />
+      <button type="submit" disabled={pending} className="text-xs text-primary hover:underline">
+        OK
+      </button>
+      <button type="button" onClick={() => setOpen(false)} className="text-xs text-text-secondary hover:underline">
+        Annuler
+      </button>
+    </form>
+  );
+}
+
 function AssignProprietaireForm({ lotId }: { lotId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ nom: "", prenom: "", email: "", password: "" });
+  const [form, setForm] = useState({
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    typeOccupant: "PROPRIETAIRE" as "PROPRIETAIRE" | "LOCATAIRE",
+    password: "",
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -225,7 +297,7 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 text-xs text-primary hover:underline"
       >
-        <UserPlus size={12} /> Assigner un copropriétaire
+        <UserPlus size={12} /> Assigner un occupant
       </button>
     );
   }
@@ -254,6 +326,20 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         className="w-48 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
       />
+      <input
+        placeholder="Téléphone"
+        value={form.telephone}
+        onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+        className="w-36 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+      />
+      <select
+        value={form.typeOccupant}
+        onChange={(e) => setForm({ ...form, typeOccupant: e.target.value as typeof form.typeOccupant })}
+        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+      >
+        <option value="PROPRIETAIRE">Propriétaire</option>
+        <option value="LOCATAIRE">Locataire</option>
+      </select>
       <input
         required
         type="password"
@@ -290,13 +376,19 @@ function LotRow({ lot }: { lot: LotWithOwners }) {
           <span className="text-text-secondary">
             · {lot.type.toLowerCase()}
             {lot.etage !== null ? ` · étage ${lot.etage}` : ""}
-            {lot.surface ? ` · ${lot.surface} m²` : ""} · {lot.tantiemesCharges}‰ charges
+            {lot.surface ? ` · ${lot.surface} m²` : ""} · {lot.tantiemesCharges}‰ charges ·{" "}
           </span>
+          <EditForfaitForm lotId={lot.id} montantForfaitaire={lot.montantForfaitaire} />
         </div>
         <div className="text-sm text-text-secondary">
           {lot.proprietaires.length > 0
             ? lot.proprietaires
-                .map((p) => `${p.user.prenom} ${p.user.nom}`)
+                .map(
+                  (p) =>
+                    `${p.user.prenom} ${p.user.nom} (${OCCUPANT_LABELS[p.typeOccupant]}${
+                      p.user.telephone ? ` · ${p.user.telephone}` : ""
+                    })`
+                )
                 .join(", ")
             : <AssignProprietaireForm lotId={lot.id} />}
         </div>

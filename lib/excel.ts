@@ -8,13 +8,19 @@ export const IMPORT_COLUMNS = [
   "Surface m²",
   "Tantièmes généraux",
   "Tantièmes charges",
+  "Montant forfaitaire",
   "Copropriétaire - Prénom",
   "Copropriétaire - Nom",
   "Copropriétaire - Email",
+  "Copropriétaire - Téléphone",
+  "Copropriétaire - Type (Propriétaire/Locataire)",
 ] as const;
 
 const LOT_TYPES = ["APPARTEMENT", "COMMERCE", "PARKING", "CAVE"] as const;
 type LotTypeValue = (typeof LOT_TYPES)[number];
+
+const OCCUPANT_TYPES = ["PROPRIETAIRE", "LOCATAIRE"] as const;
+type OccupantTypeValue = (typeof OCCUPANT_TYPES)[number];
 
 export type ImportRow = {
   line: number;
@@ -25,9 +31,12 @@ export type ImportRow = {
   surface: number | null;
   tantiemesGeneraux: number;
   tantiemesCharges: number;
+  montantForfaitaire: number | null;
   proprietairePrenom: string | null;
   proprietaireNom: string | null;
   proprietaireEmail: string | null;
+  proprietaireTelephone: string | null;
+  typeOccupant: OccupantTypeValue;
 };
 
 export type ImportParseResult = {
@@ -98,6 +107,15 @@ export async function parseResidentsWorkbook(buffer: Buffer): Promise<ImportPars
     const proprietairePrenom = cellText(get(row, "Copropriétaire - Prénom")) || null;
     const proprietaireNom = cellText(get(row, "Copropriétaire - Nom")) || null;
     const proprietaireEmail = cellText(get(row, "Copropriétaire - Email")) || null;
+    const proprietaireTelephone = cellText(get(row, "Copropriétaire - Téléphone")) || null;
+    const typeOccupantRaw = cellText(
+      get(row, "Copropriétaire - Type (Propriétaire/Locataire)")
+    ).toUpperCase();
+    const typeOccupant: OccupantTypeValue = OCCUPANT_TYPES.includes(
+      typeOccupantRaw as OccupantTypeValue
+    )
+      ? (typeOccupantRaw as OccupantTypeValue)
+      : "PROPRIETAIRE";
 
     if ((proprietairePrenom || proprietaireNom) && !proprietaireEmail) {
       errors.push({ line: rowNumber, message: "Email du copropriétaire manquant." });
@@ -117,9 +135,12 @@ export async function parseResidentsWorkbook(buffer: Buffer): Promise<ImportPars
       surface: cellNumber(get(row, "Surface m²")),
       tantiemesGeneraux,
       tantiemesCharges,
+      montantForfaitaire: cellNumber(get(row, "Montant forfaitaire")),
       proprietairePrenom,
       proprietaireNom,
       proprietaireEmail,
+      proprietaireTelephone,
+      typeOccupant,
     });
   });
 
@@ -139,9 +160,12 @@ export async function buildResidentsTemplate(): Promise<Buffer> {
     "Surface m²": 75,
     "Tantièmes généraux": 120,
     "Tantièmes charges": 120,
+    "Montant forfaitaire": 300,
     "Copropriétaire - Prénom": "Fatima",
     "Copropriétaire - Nom": "Alaoui",
     "Copropriétaire - Email": "fatima.alaoui@example.com",
+    "Copropriétaire - Téléphone": "0661234567",
+    "Copropriétaire - Type (Propriétaire/Locataire)": "PROPRIETAIRE",
   });
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

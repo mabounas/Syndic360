@@ -39,13 +39,21 @@ export const lotSchema = z.object({
   tantiemesGeneraux: z.coerce.number().int().min(0),
   tantiemesCharges: z.coerce.number().int().min(0),
   etage: z.coerce.number().int().optional(),
+  montantForfaitaire: z.coerce.number().min(0).optional(),
 });
 export type LotInput = z.infer<typeof lotSchema>;
+
+export const lotUpdateSchema = z.object({
+  montantForfaitaire: z.coerce.number().min(0),
+});
+export type LotUpdateInput = z.infer<typeof lotUpdateSchema>;
 
 export const assignProprietaireSchema = z.object({
   email: z.email("Adresse email invalide"),
   nom: z.string().min(1, "Nom requis"),
   prenom: z.string().min(1, "Prénom requis"),
+  telephone: z.string().optional(),
+  typeOccupant: z.enum(["PROPRIETAIRE", "LOCATAIRE"]),
   password: z.string().min(8, "8 caractères minimum"),
 });
 export type AssignProprietaireInput = z.infer<typeof assignProprietaireSchema>;
@@ -64,7 +72,6 @@ export const appelChargesSchema = z.object({
   dateEcheance: z.string().min(1, "Date d'échéance requise"),
   repartition: z.enum(["TANTIEMES", "FORFAIT"]),
   montantTotal: z.coerce.number().min(0).optional(),
-  montantParLot: z.coerce.number().min(0).optional(),
 });
 export type AppelChargesInput = z.infer<typeof appelChargesSchema>;
 

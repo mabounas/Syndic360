@@ -27,6 +27,11 @@ enum LotType {
   CAVE
 }
 
+enum TypeOccupant {
+  PROPRIETAIRE
+  LOCATAIRE
+}
+
 enum AppelChargesStatut {
   BROUILLON
   PUBLIE
@@ -166,14 +171,15 @@ model Batiment {
 }
 
 model Lot {
-  id                String  @id @default(cuid())
-  numero            String
-  type              LotType @default(APPARTEMENT)
-  surface           Float?
-  tantiemesGeneraux Int     @default(0)
-  tantiemesCharges  Int     @default(0)
-  etage             Int?
-  batimentId        String
+  id                  String  @id @default(cuid())
+  numero              String
+  type                LotType @default(APPARTEMENT)
+  surface             Float?
+  tantiemesGeneraux   Int     @default(0)
+  tantiemesCharges    Int     @default(0)
+  etage               Int?
+  montantForfaitaire  Float?
+  batimentId          String
 
   batiment      Batiment          @relation(fields: [batimentId], references: [id], onDelete: Cascade)
   proprietaires LotProprietaire[]
@@ -187,9 +193,10 @@ model Lot {
 
 // Table de jointure Lot <-> User : gère l'indivision (plusieurs copropriétaires par lot)
 model LotProprietaire {
-  id     String @id @default(cuid())
-  lotId  String
-  userId String
+  id            String       @id @default(cuid())
+  lotId         String
+  userId        String
+  typeOccupant  TypeOccupant @default(PROPRIETAIRE)
 
   lot  Lot  @relation(fields: [lotId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,5 +1,6 @@
 export type LotOwner = {
-  user: { id: string; nom: string; prenom: string; email: string };
+  typeOccupant: "PROPRIETAIRE" | "LOCATAIRE";
+  user: { id: string; nom: string; prenom: string; email: string; telephone: string | null };
 };
 
 export type LotWithOwners = {
@@ -10,6 +11,7 @@ export type LotWithOwners = {
   tantiemesGeneraux: number;
   tantiemesCharges: number;
   etage: number | null;
+  montantForfaitaire: number | null;
   proprietaires: LotOwner[];
 };
 

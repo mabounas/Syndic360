@@ -116,9 +116,7 @@ function NewAppelChargesForm({ budgetId }: { budgetId: string }) {
         periode: form.periode,
         dateEcheance: form.dateEcheance,
         repartition: form.repartition,
-        ...(form.repartition === "TANTIEMES"
-          ? { montantTotal: Number(form.montant) }
-          : { montantParLot: Number(form.montant) }),
+        ...(form.repartition === "TANTIEMES" ? { montantTotal: Number(form.montant) } : {}),
       }),
     });
     setPending(false);
@@ -166,14 +164,21 @@ function NewAppelChargesForm({ budgetId }: { budgetId: string }) {
         <option value="TANTIEMES">Au prorata des tantièmes</option>
         <option value="FORFAIT">Forfait identique par lot</option>
       </select>
-      <input
-        required
-        type="number"
-        placeholder={form.repartition === "TANTIEMES" ? "Montant total (MAD)" : "Montant par lot (MAD)"}
-        value={form.montant}
-        onChange={(e) => setForm({ ...form, montant: e.target.value })}
-        className="w-44 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
+      {form.repartition === "TANTIEMES" ? (
+        <input
+          required
+          type="number"
+          placeholder="Montant total (MAD)"
+          value={form.montant}
+          onChange={(e) => setForm({ ...form, montant: e.target.value })}
+          className="w-44 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
+        />
+      ) : (
+        <p className="text-xs text-text-secondary">
+          Montant = forfait propre à chaque lot (à définir sur chaque lot dans l&apos;onglet
+          Lots &amp; copropriétaires).
+        </p>
+      )}
       <button
         type="submit"
         disabled={pending}

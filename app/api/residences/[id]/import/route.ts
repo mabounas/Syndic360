@@ -65,6 +65,7 @@ export async function POST(
             etage: row.etage ?? undefined,
             tantiemesGeneraux: row.tantiemesGeneraux,
             tantiemesCharges: row.tantiemesCharges,
+            montantForfaitaire: row.montantForfaitaire ?? undefined,
             batimentId,
           },
         });
@@ -80,6 +81,7 @@ export async function POST(
                 passwordHash: await hashPassword(password),
                 nom: row.proprietaireNom ?? "",
                 prenom: row.proprietairePrenom ?? "",
+                telephone: row.proprietaireTelephone ?? undefined,
                 role: "COPROPRIETAIRE",
                 organisationId: session.organisationId,
               },
@@ -95,8 +97,8 @@ export async function POST(
 
           await prisma.lotProprietaire.upsert({
             where: { lotId_userId: { lotId: lot.id, userId: user.id } },
-            create: { lotId: lot.id, userId: user.id },
-            update: {},
+            create: { lotId: lot.id, userId: user.id, typeOccupant: row.typeOccupant },
+            update: { typeOccupant: row.typeOccupant },
           });
           proprietairesLinked += 1;
         }

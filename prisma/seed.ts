@@ -135,6 +135,7 @@ async function main() {
       tantiemesGeneraux: 120,
       tantiemesCharges: 120,
       etage: 1,
+      montantForfaitaire: 300,
       batimentId: batimentA.id,
     },
   });
@@ -147,6 +148,7 @@ async function main() {
       tantiemesGeneraux: 140,
       tantiemesCharges: 140,
       etage: 1,
+      montantForfaitaire: 350,
       batimentId: batimentA.id,
     },
   });
@@ -159,6 +161,7 @@ async function main() {
       tantiemesGeneraux: 120,
       tantiemesCharges: 120,
       etage: 2,
+      montantForfaitaire: 300,
       batimentId: batimentA.id,
     },
   });
@@ -170,6 +173,7 @@ async function main() {
       surface: 12,
       tantiemesGeneraux: 20,
       tantiemesCharges: 20,
+      montantForfaitaire: 50,
       batimentId: batimentA.id,
     },
   });
@@ -182,6 +186,7 @@ async function main() {
       tantiemesGeneraux: 500,
       tantiemesCharges: 500,
       etage: 0,
+      montantForfaitaire: 250,
       batimentId: batimentUnique.id,
     },
   });
@@ -194,6 +199,7 @@ async function main() {
       tantiemesGeneraux: 500,
       tantiemesCharges: 500,
       etage: 0,
+      montantForfaitaire: 250,
       batimentId: batimentUnique.id,
     },
   });

@@ -44,13 +44,16 @@ export async function POST(
         email: parsed.data.email,
         nom: parsed.data.nom,
         prenom: parsed.data.prenom,
+        telephone: parsed.data.telephone || undefined,
         passwordHash,
         role: "COPROPRIETAIRE",
         organisationId: session.organisationId,
       },
     });
 
-    await prisma.lotProprietaire.create({ data: { lotId, userId: user.id } });
+    await prisma.lotProprietaire.create({
+      data: { lotId, userId: user.id, typeOccupant: parsed.data.typeOccupant },
+    });
 
     return NextResponse.json(
       { id: user.id, email: user.email },
