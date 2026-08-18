@@ -28,7 +28,7 @@ export function LoginForm() {
       setServerError(body?.error ?? "Une erreur est survenue.");
       return;
     }
-    router.push("/");
+    router.push("/dashboard");
     router.refresh();
   }
 

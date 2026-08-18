@@ -19,7 +19,7 @@ const STATUT_LABELS: Record<string, string> = {
 
 export default async function MesAssembleesPage() {
   const session = await requireSession();
-  if (isStaffRole(session.role)) redirect("/");
+  if (isStaffRole(session.role)) redirect("/dashboard");
 
   const myLots = await prisma.lot.findMany({
     where: { proprietaires: { some: { userId: session.sub } } },

@@ -6,7 +6,7 @@ import { isStaffRole } from "@/lib/rbac";
 import type { Role } from "@/app/generated/prisma/enums";
 
 const STAFF_NAV = [
-  { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/residences", label: "Résidences", icon: Building2 },
 ];
 

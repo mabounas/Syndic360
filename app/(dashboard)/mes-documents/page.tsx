@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/Header";
 
 export default async function MesDocumentsPage() {
   const session = await requireSession();
-  if (isStaffRole(session.role)) redirect("/");
+  if (isStaffRole(session.role)) redirect("/dashboard");
 
   const lotIds = await ownedLotIds(session);
   const lots = await prisma.lot.findMany({

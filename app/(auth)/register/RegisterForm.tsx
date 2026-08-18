@@ -31,7 +31,7 @@ export function RegisterForm() {
       setServerError(body?.error ?? "Une erreur est survenue.");
       return;
     }
-    router.push("/");
+    router.push("/dashboard");
     router.refresh();
   }
 
@@ -115,6 +115,7 @@ export function RegisterForm() {
         >
           <option value="BENEVOLE">Syndic bénévole (gratuit, 1 résidence)</option>
           <option value="STARTER">Cabinet professionnel (Starter)</option>
+          <option value="PRO">Cabinet professionnel (Pro)</option>
         </select>
       </div>
 

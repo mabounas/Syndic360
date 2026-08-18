@@ -7,7 +7,7 @@ import { ChargesTable } from "@/components/ui/ChargesTable";
 
 export default async function MesChargesPage() {
   const session = await requireSession();
-  if (isStaffRole(session.role)) redirect("/");
+  if (isStaffRole(session.role)) redirect("/dashboard");
 
   const lotIds = await ownedLotIds(session);
 
