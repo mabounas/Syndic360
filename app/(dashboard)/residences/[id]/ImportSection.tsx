@@ -61,7 +61,7 @@ export function ImportSection({ residenceId }: { residenceId: string }) {
         Remplissez le modèle (une ligne par lot) puis importez-le. Les bâtiments sont créés
         automatiquement s&apos;ils n&apos;existent pas encore ; un compte copropriétaire est créé
         pour chaque email non reconnu — chaque résident active ensuite lui-même son compte via{" "}
-        <span className="font-medium">/activer-mon-compte</span>.
+        <span className="font-medium">/register</span> (choix « Copropriétaire »).
       </p>
 
       <label
@@ -98,7 +98,7 @@ export function ImportSection({ residenceId }: { residenceId: string }) {
           {result.usersCreated.length > 0 && (
             <div>
               <p className="mb-1 font-medium text-text-primary">
-                Nouveaux comptes créés (à activer par chacun via /activer-mon-compte) :
+                Nouveaux comptes créés (à activer par chacun via /register — Copropriétaire) :
               </p>
               <ul className="list-inside list-disc text-text-secondary">
                 {result.usersCreated.map((u) => (

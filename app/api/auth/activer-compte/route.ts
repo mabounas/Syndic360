@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, nom, prenom, password } = parsed.data;
+  const { email, nom, prenom, telephone, password } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -45,8 +45,14 @@ export async function POST(request: Request) {
   const passwordHash = await hashPassword(password);
   const updated = await prisma.user.update({
     where: { id: user!.id },
-    data: { passwordHash, passwordSet: true },
+    data: { passwordHash, passwordSet: true, ...(telephone ? { telephone } : {}) },
   });
+
+  const lots = await prisma.lotProprietaire.findMany({
+    where: { userId: updated.id },
+    select: { lot: { select: { numero: true, batiment: { select: { residence: { select: { nom: true } } } } } } },
+  });
+  const residences = [...new Set(lots.map((l) => l.lot.batiment.residence.nom))];
 
   const token = await signSession({
     sub: updated.id,
@@ -57,7 +63,7 @@ export async function POST(request: Request) {
     organisationId: updated.organisationId,
   });
 
-  const response = NextResponse.json({ id: updated.id, email: updated.email });
+  const response = NextResponse.json({ id: updated.id, email: updated.email, residences });
   response.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

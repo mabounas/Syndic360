@@ -363,7 +363,7 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
       </button>
       <p className="w-full text-xs text-text-secondary">
         Laissez le mot de passe vide pour que la personne active elle-même son compte sur{" "}
-        <span className="font-medium">/activer-mon-compte</span> (vérification nom, prénom, email).
+        <span className="font-medium">/register</span> (choix « Copropriétaire », vérification nom, prénom, email).
       </p>
       {error && <p className="w-full text-sm text-danger">{error}</p>}
     </form>

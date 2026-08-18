@@ -61,6 +61,7 @@ export type AssignProprietaireInput = z.infer<typeof assignProprietaireSchema>;
 export const activerCompteSchema = z.object({
   prenom: z.string().min(1, "Prénom requis"),
   nom: z.string().min(1, "Nom requis"),
+  telephone: z.string().optional(),
   email: z.email("Adresse email invalide"),
   password: z.string().min(8, "8 caractères minimum"),
 });
