@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserPlus, Pencil, Check, X } from "lucide-react";
+import { Plus, UserPlus, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BatimentWithLots, LotWithOwners } from "./types";
 
@@ -334,19 +334,13 @@ function toEditState(lot: LotWithOwners): LotEditState {
   };
 }
 
-function LotTableRow({ lot }: { lot: LotWithOwners }) {
+function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => void }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [assigning, setAssigning] = useState(false);
   const [pending, setPending] = useState(false);
   const [form, setForm] = useState<LotEditState>(() => toEditState(lot));
 
-  function startEdit() {
-    setForm(toEditState(lot));
-    setEditing(true);
-  }
-
-  async function save() {
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
     setPending(true);
     try {
       const res = await fetch(`/api/lots/${lot.id}`, {
@@ -363,8 +357,8 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
         }),
       });
       if (res.ok) {
-        setEditing(false);
         router.refresh();
+        onClose();
       }
     } finally {
       setPending(false);
@@ -372,97 +366,166 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
   }
 
   return (
-    <>
-      <tr className={cn("border-t border-border", editing && "bg-bg-page")}>
-        <td className={cellClass}>
-          {editing ? (
-            <input
-              value={form.numero}
-              onChange={(e) => setForm({ ...form, numero: e.target.value })}
-              className={cn(inputClass, "w-20")}
-            />
-          ) : (
-            <span className="font-medium text-text-primary">{lot.numero}</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
-            <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as LotEditState["type"] })}
-              className={inputClass}
-            >
-              {LOT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-text-secondary">{LOT_TYPE_LABELS[lot.type]}</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
-            <input
-              type="number"
-              value={form.etage}
-              onChange={(e) => setForm({ ...form, etage: e.target.value })}
-              className={cn(inputClass, "w-16")}
-            />
-          ) : (
-            <span className="text-text-secondary">{lot.etage ?? "—"}</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
-            <input
-              type="number"
-              value={form.surface}
-              onChange={(e) => setForm({ ...form, surface: e.target.value })}
-              className={cn(inputClass, "w-20")}
-            />
-          ) : (
-            <span className="text-text-secondary">{lot.surface ? `${lot.surface} m²` : "—"}</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
-            <input
-              type="number"
-              value={form.tantiemesGeneraux}
-              onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
-              className={cn(inputClass, "w-20")}
-            />
-          ) : (
-            <span className="text-text-secondary">{lot.tantiemesGeneraux}‰</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
-            <input
-              type="number"
-              value={form.tantiemesCharges}
-              onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
-              className={cn(inputClass, "w-20")}
-            />
-          ) : (
-            <span className="text-text-secondary">{lot.tantiemesCharges}‰</span>
-          )}
-        </td>
-        <td className={cellClass}>
-          {editing ? (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-primary">Modifier le lot {lot.numero}</h3>
+          <button onClick={onClose} className="text-text-secondary hover:text-danger">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={save} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Numéro</label>
+              <input
+                required
+                value={form.numero}
+                onChange={(e) => setForm({ ...form, numero: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Type</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as LotEditState["type"] })}
+                className={inputClass}
+              >
+                {LOT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Étage</label>
+              <input
+                type="number"
+                value={form.etage}
+                onChange={(e) => setForm({ ...form, etage: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Surface (m²)</label>
+              <input
+                type="number"
+                value={form.surface}
+                onChange={(e) => setForm({ ...form, surface: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes généraux</label>
+              <input
+                type="number"
+                value={form.tantiemesGeneraux}
+                onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes charges</label>
+              <input
+                type="number"
+                value={form.tantiemesCharges}
+                onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-secondary">Montant forfaitaire (MAD)</label>
             <input
               type="number"
               value={form.montantForfaitaire}
               onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
-              className={cn(inputClass, "w-24")}
+              className={inputClass}
             />
-          ) : (
-            <span className="text-text-secondary">
-              {lot.montantForfaitaire !== null ? `${lot.montantForfaitaire} MAD` : "—"}
-            </span>
+          </div>
+
+          {lot.proprietaires.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-text-secondary">Occupant(s)</p>
+              <div className="rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
+                {lot.proprietaires.map((p) => (
+                  <div key={p.user.id} className="text-text-secondary">
+                    <span className="font-medium text-text-primary">
+                      {p.user.prenom} {p.user.nom}
+                    </span>{" "}
+                    <span className="text-xs">
+                      ({OCCUPANT_LABELS[p.typeOccupant]}
+                      {p.user.telephone ? ` · ${p.user.telephone}` : ""})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+            >
+              {pending ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function LotTableRow({ lot }: { lot: LotWithOwners }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
+  return (
+    <>
+      <tr className="border-t border-border">
+        <td className={cellClass}>
+          <span className="font-medium text-text-primary">{lot.numero}</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">{LOT_TYPE_LABELS[lot.type]}</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">{lot.etage ?? "—"}</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">{lot.surface ? `${lot.surface} m²` : "—"}</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">{lot.tantiemesGeneraux}‰</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">{lot.tantiemesCharges}‰</span>
+        </td>
+        <td className={cellClass}>
+          <span className="text-text-secondary">
+            {lot.montantForfaitaire !== null ? `${lot.montantForfaitaire} MAD` : "—"}
+          </span>
         </td>
         <td className={cellClass}>
           {lot.proprietaires.length > 0 ? (
@@ -491,29 +554,13 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
           )}
         </td>
         <td className={cn(cellClass, "text-right")}>
-          {editing ? (
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={save}
-                disabled={pending}
-                title="Enregistrer"
-                className="text-success hover:opacity-70 disabled:opacity-50"
-              >
-                <Check size={16} />
-              </button>
-              <button onClick={() => setEditing(false)} title="Annuler" className="text-text-secondary hover:text-danger">
-                <X size={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={startEdit}
-              title="Modifier ce lot"
-              className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary"
-            >
-              <Pencil size={13} /> Modifier
-            </button>
-          )}
+          <button
+            onClick={() => setModalOpen(true)}
+            title="Modifier ce lot"
+            className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary"
+          >
+            <Pencil size={13} /> Modifier
+          </button>
         </td>
       </tr>
       {assigning && (
@@ -523,6 +570,7 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
           </td>
         </tr>
       )}
+      {modalOpen && <LotEditModal lot={lot} onClose={() => setModalOpen(false)} />}
     </>
   );
 }
