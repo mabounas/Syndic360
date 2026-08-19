@@ -64,6 +64,15 @@ export const assignProprietaireSchema = z.object({
 });
 export type AssignProprietaireInput = z.infer<typeof assignProprietaireSchema>;
 
+export const updateOccupantSchema = z.object({
+  email: z.email("Adresse email invalide"),
+  nom: z.string().min(1, "Nom requis"),
+  prenom: z.string().min(1, "Prénom requis"),
+  telephone: z.string().optional(),
+  typeOccupant: z.enum(["PROPRIETAIRE", "LOCATAIRE"]),
+});
+export type UpdateOccupantInput = z.infer<typeof updateOccupantSchema>;
+
 export const activerCompteSchema = z.object({
   prenom: z.string().min(1, "Prénom requis"),
   nom: z.string().min(1, "Nom requis"),

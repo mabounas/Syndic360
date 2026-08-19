@@ -533,13 +533,40 @@ function toEditState(lot: LotWithOwners): LotFormState {
   };
 }
 
+type OccupantEditState = {
+  userId: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  typeOccupant: "PROPRIETAIRE" | "LOCATAIRE";
+};
+
+function toOccupantEditState(lot: LotWithOwners): OccupantEditState[] {
+  return lot.proprietaires.map((p) => ({
+    userId: p.user.id,
+    nom: p.user.nom,
+    prenom: p.user.prenom,
+    email: p.user.email,
+    telephone: p.user.telephone ?? "",
+    typeOccupant: p.typeOccupant,
+  }));
+}
+
 function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => void }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LotFormState>(() => toEditState(lot));
+  const [occupants, setOccupants] = useState<OccupantEditState[]>(() => toOccupantEditState(lot));
+
+  function updateOccupant(userId: string, patch: Partial<OccupantEditState>) {
+    setOccupants((prev) => prev.map((o) => (o.userId === userId ? { ...o, ...patch } : o)));
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     setPending(true);
     try {
       const res = await fetch(`/api/lots/${lot.id}`, {
@@ -555,10 +582,33 @@ function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => voi
           montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : null,
         }),
       });
-      if (res.ok) {
-        router.refresh();
-        onClose();
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Erreur lors de l'enregistrement du lot.");
+        return;
       }
+
+      for (const occ of occupants) {
+        const res2 = await fetch(`/api/lots/${lot.id}/proprietaires/${occ.userId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nom: occ.nom,
+            prenom: occ.prenom,
+            email: occ.email,
+            telephone: occ.telephone,
+            typeOccupant: occ.typeOccupant,
+          }),
+        });
+        if (!res2.ok) {
+          const body = await res2.json().catch(() => null);
+          setError(body?.error ?? `Erreur lors de la mise à jour de ${occ.prenom} ${occ.nom}.`);
+          return;
+        }
+      }
+
+      router.refresh();
+      onClose();
     } finally {
       setPending(false);
     }
@@ -569,22 +619,76 @@ function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => voi
       <form onSubmit={save} className="space-y-4">
         <LotFormFields form={form} setForm={setForm} />
 
-        {lot.proprietaires.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-medium text-text-secondary">Occupant(s)</p>
-            <div className="space-y-2 rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
-              {lot.proprietaires.map((p) => (
-                <div key={p.user.id} className="grid grid-cols-3 gap-2">
-                  <span className="font-medium text-text-primary">
-                    {p.user.prenom} {p.user.nom}
-                  </span>
-                  <span className="text-text-secondary">{OCCUPANT_LABELS[p.typeOccupant]}</span>
-                  <span className="text-text-secondary">{p.user.telephone ?? "—"}</span>
+        {occupants.length > 0 && (
+          <div className="border-t border-border pt-4">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
+              Occupant{occupants.length > 1 ? "s" : ""}
+            </p>
+            <div className="space-y-4">
+              {occupants.map((occ) => (
+                <div key={occ.userId} className="space-y-3 rounded-[var(--radius-button)] bg-bg-page p-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-secondary">Prénom</label>
+                      <input
+                        required
+                        value={occ.prenom}
+                        onChange={(e) => updateOccupant(occ.userId, { prenom: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-secondary">Nom</label>
+                      <input
+                        required
+                        value={occ.nom}
+                        onChange={(e) => updateOccupant(occ.userId, { nom: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-secondary">Statut</label>
+                      <select
+                        value={occ.typeOccupant}
+                        onChange={(e) =>
+                          updateOccupant(occ.userId, {
+                            typeOccupant: e.target.value as OccupantEditState["typeOccupant"],
+                          })
+                        }
+                        className={inputClass}
+                      >
+                        <option value="PROPRIETAIRE">Propriétaire</option>
+                        <option value="LOCATAIRE">Locataire</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-secondary">Email</label>
+                      <input
+                        required
+                        type="email"
+                        value={occ.email}
+                        onChange={(e) => updateOccupant(occ.userId, { email: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-text-secondary">Téléphone</label>
+                      <input
+                        value={occ.telephone}
+                        onChange={(e) => updateOccupant(occ.userId, { telephone: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
