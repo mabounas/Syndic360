@@ -226,6 +226,9 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-10">
         <SyndicLogo size={22} />
+        <Link href="/contact" className="text-sm font-medium text-text-secondary hover:text-primary">
+          Nous contacter
+        </Link>
         <span className="text-sm text-text-secondary">© 2026 Syndic360. Tous droits réservés.</span>
       </footer>
     </div>

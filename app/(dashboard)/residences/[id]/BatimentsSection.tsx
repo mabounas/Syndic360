@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserPlus, Pencil, X } from "lucide-react";
+import { Plus, UserPlus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Modal } from "@/components/ui/Modal";
 import type { BatimentWithLots, LotWithOwners } from "./types";
 
 const LOT_TYPES = [
@@ -45,36 +46,6 @@ const EMPTY_LOT_FORM: LotFormState = {
   tantiemesCharges: "",
   montantForfaitaire: "",
 };
-
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
-          <button onClick={onClose} className="text-text-secondary hover:text-danger">
-            <X size={18} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function LotFormFields({
   form,

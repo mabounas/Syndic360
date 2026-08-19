@@ -16,6 +16,8 @@ export function SubNav({ residenceId }: { residenceId: string }) {
     { href: `${base}/documents`, label: "Documents" },
     { href: `${base}/residents`, label: "Résidents" },
     { href: `${base}/administrateurs`, label: "Administrateurs" },
+    { href: `${base}/tickets`, label: "Tickets" },
+    { href: `${base}/parametres`, label: "Paramètres" },
   ];
 
   return (

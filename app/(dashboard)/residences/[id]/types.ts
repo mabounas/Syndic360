@@ -103,3 +103,33 @@ export type DocumentRow = {
   createdAt: Date;
   lotId: string | null;
 };
+
+export type TicketRow = {
+  id: string;
+  titre: string;
+  description: string;
+  localisation: string;
+  urgence: "BASSE" | "MOYENNE" | "HAUTE";
+  statut: "OUVERT" | "EN_COURS" | "RESOLU";
+  signalePar: string | null;
+  createdAt: Date;
+};
+
+export type ResidenceSettings = {
+  id: string;
+  nom: string;
+  adresse: string;
+  ville: string;
+  totalTantiemes: number;
+};
+
+export type OrganisationSettings = {
+  id: string;
+  nom: string;
+  iban: string | null;
+  bic: string | null;
+  contactPrenom: string | null;
+  contactNom: string | null;
+  contactEmail: string | null;
+  contactTelephone: string | null;
+};

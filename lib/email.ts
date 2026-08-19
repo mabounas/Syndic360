@@ -105,3 +105,20 @@ export function sendResidentBlockedEmail(to: string, prenom: string, residenceNo
     ),
   });
 }
+
+export function sendContactMessageEmail(
+  to: string,
+  data: { nom: string; email: string; sujet: string; message: string }
+) {
+  return sendEmail({
+    to,
+    subject: `Syndic360 — Nouveau message de contact : ${data.sujet}`,
+    html: wrapper(
+      "Nouveau message de contact",
+      `<p><strong>De :</strong> ${data.nom} (${data.email})</p>
+       <p><strong>Sujet :</strong> ${data.sujet}</p>
+       <p><strong>Message :</strong></p>
+       <p style="white-space:pre-wrap;">${data.message}</p>`
+    ),
+  });
+}

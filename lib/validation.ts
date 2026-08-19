@@ -24,6 +24,24 @@ export const residenceSchema = z.object({
 });
 export type ResidenceInput = z.infer<typeof residenceSchema>;
 
+export const residenceUpdateSchema = z.object({
+  nom: z.string().min(2, "Nom trop court").optional(),
+  adresse: z.string().min(2, "Adresse requise").optional(),
+  ville: z.string().min(2, "Ville requise").optional(),
+  totalTantiemes: z.coerce.number().int().min(1).optional(),
+});
+export type ResidenceUpdateInput = z.infer<typeof residenceUpdateSchema>;
+
+export const organisationSettingsSchema = z.object({
+  iban: z.string().optional(),
+  bic: z.string().optional(),
+  contactPrenom: z.string().optional(),
+  contactNom: z.string().optional(),
+  contactEmail: z.union([z.email("Adresse email invalide"), z.literal("")]).optional(),
+  contactTelephone: z.string().optional(),
+});
+export type OrganisationSettingsInput = z.infer<typeof organisationSettingsSchema>;
+
 export const batimentSchema = z.object({
   residenceId: z.string().min(1),
   nom: z.string().min(1, "Nom requis"),
@@ -147,3 +165,26 @@ export const documentSchema = z.object({
   visibilite: z.enum(["COMMUN", "PRIVE"]),
 });
 export type DocumentInput = z.infer<typeof documentSchema>;
+
+export const ticketSchema = z.object({
+  residenceId: z.string().min(1),
+  titre: z.string().min(1, "Titre requis"),
+  description: z.string().min(1, "Description requise"),
+  localisation: z.string().min(1, "Localisation requise"),
+  urgence: z.enum(["BASSE", "MOYENNE", "HAUTE"]),
+  signalePar: z.string().optional(),
+});
+export type TicketInput = z.infer<typeof ticketSchema>;
+
+export const ticketStatutSchema = z.object({
+  statut: z.enum(["OUVERT", "EN_COURS", "RESOLU"]),
+});
+export type TicketStatutInput = z.infer<typeof ticketStatutSchema>;
+
+export const contactSchema = z.object({
+  nom: z.string().min(1, "Nom requis"),
+  email: z.email("Adresse email invalide"),
+  sujet: z.string().min(1, "Sujet requis"),
+  message: z.string().min(10, "Message trop court (10 caractères minimum)"),
+});
+export type ContactInput = z.infer<typeof contactSchema>;

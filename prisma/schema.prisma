@@ -96,10 +96,16 @@ enum UserStatut {
 }
 
 model Organisation {
-  id        String   @id @default(cuid())
-  nom       String
-  plan      String   @default("BENEVOLE")
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  nom              String
+  plan             String   @default("BENEVOLE")
+  iban             String?
+  bic              String?
+  contactPrenom    String?
+  contactNom       String?
+  contactEmail     String?
+  contactTelephone String?
+  createdAt        DateTime @default(now())
 
   users      User[]
   residences Residence[]
@@ -108,8 +114,8 @@ model Organisation {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String     @id @default(cuid())
+  email          String     @unique
   passwordHash   String
   nom            String
   prenom         String
@@ -118,15 +124,15 @@ model User {
   statut         UserStatut @default(APPROUVE)
   passwordSet    Boolean    @default(true)
   organisationId String
-  createdAt      DateTime @default(now())
+  createdAt      DateTime   @default(now())
 
-  organisation    Organisation     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
-  lots            LotProprietaire[]
-  documentsUploaded Document[]     @relation("DocumentUploader")
-  auditLogs       AuditLog[]
-  residenceAdmins ResidenceAdmin[]
-  votes           Vote[]
-  relancesEnvoyees Relance[]
+  organisation      Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  lots              LotProprietaire[]
+  documentsUploaded Document[]        @relation("DocumentUploader")
+  auditLogs         AuditLog[]
+  residenceAdmins   ResidenceAdmin[]
+  votes             Vote[]
+  relancesEnvoyees  Relance[]
 
   @@index([organisationId])
   @@map("users")
@@ -138,26 +144,79 @@ model Residence {
   adresse        String
   ville          String
   nbLots         Int      @default(0)
+  totalTantiemes Int      @default(1000)
   organisationId String
   createdAt      DateTime @default(now())
 
-  organisation Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisation Organisation        @relation(fields: [organisationId], references: [id], onDelete: Cascade)
   batiments    Batiment[]
   budgets      Budget[]
   documents    Document[]
   admins       ResidenceAdmin[]
   assemblees   Ag[]
   ecritures    EcritureComptable[]
+  tickets      Ticket[]
 
   @@index([organisationId])
   @@map("residences")
+}
+
+enum TicketUrgence {
+  BASSE
+  MOYENNE
+  HAUTE
+}
+
+enum TicketStatut {
+  OUVERT
+  EN_COURS
+  RESOLU
+}
+
+// Tickets techniques (incidents/travaux) signalés au niveau d'une résidence —
+// gérés par le syndic/gestionnaire, pas par les copropriétaires directement.
+model Ticket {
+  id           String        @id @default(cuid())
+  titre        String
+  description  String
+  localisation String
+  urgence      TicketUrgence @default(MOYENNE)
+  statut       TicketStatut  @default(OUVERT)
+  signalePar   String?
+  residenceId  String
+  createdAt    DateTime      @default(now())
+
+  residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
+
+  @@index([residenceId])
+  @@map("tickets")
+}
+
+enum ContactStatut {
+  NOUVEAU
+  TRAITE
+}
+
+// Messages du formulaire de contact public — adressés au SUPER_ADMIN de la
+// plateforme (pas rattachés à une organisation, l'expéditeur peut être
+// n'importe qui : prospect, syndic, copropriétaire).
+model ContactMessage {
+  id        String        @id @default(cuid())
+  nom       String
+  email     String
+  sujet     String
+  message   String
+  statut    ContactStatut @default(NOUVEAU)
+  createdAt DateTime      @default(now())
+
+  @@map("contact_messages")
 }
 
 // Assignation d'un gestionnaire/conseil bénévole à une résidence précise.
 // Un SYNDIC_ADMIN voit toutes les résidences de son organisation ; un GESTIONNAIRE
 // ou CONSEIL_BENEVOLE ne voit que les résidences où il est explicitement admin.
 model ResidenceAdmin {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   residenceId String
   userId      String
   createdAt   DateTime @default(now())
@@ -184,15 +243,15 @@ model Batiment {
 }
 
 model Lot {
-  id                  String  @id @default(cuid())
-  numero              String
-  type                LotType @default(APPARTEMENT)
-  surface             Float?
-  tantiemesGeneraux   Int     @default(0)
-  tantiemesCharges    Int     @default(0)
-  etage               Int?
-  montantForfaitaire  Float?
-  batimentId          String
+  id                 String  @id @default(cuid())
+  numero             String
+  type               LotType @default(APPARTEMENT)
+  surface            Float?
+  tantiemesGeneraux  Int     @default(0)
+  tantiemesCharges   Int     @default(0)
+  etage              Int?
+  montantForfaitaire Float?
+  batimentId         String
 
   batiment      Batiment          @relation(fields: [batimentId], references: [id], onDelete: Cascade)
   proprietaires LotProprietaire[]
@@ -206,10 +265,10 @@ model Lot {
 
 // Table de jointure Lot <-> User : gère l'indivision (plusieurs copropriétaires par lot)
 model LotProprietaire {
-  id            String       @id @default(cuid())
-  lotId         String
-  userId        String
-  typeOccupant  TypeOccupant @default(PROPRIETAIRE)
+  id           String       @id @default(cuid())
+  lotId        String
+  userId       String
+  typeOccupant TypeOccupant @default(PROPRIETAIRE)
 
   lot  Lot  @relation(fields: [lotId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -235,13 +294,13 @@ model Budget {
 }
 
 model AppelCharges {
-  id            String              @id @default(cuid())
-  periode       String
-  dateEcheance  DateTime
-  montantTotal  Float
-  statut        AppelChargesStatut  @default(BROUILLON)
-  budgetId      String
-  createdAt     DateTime            @default(now())
+  id           String             @id @default(cuid())
+  periode      String
+  dateEcheance DateTime
+  montantTotal Float
+  statut       AppelChargesStatut @default(BROUILLON)
+  budgetId     String
+  createdAt    DateTime           @default(now())
 
   budget     Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   quoteParts QuotePart[]
@@ -251,12 +310,12 @@ model AppelCharges {
 }
 
 model QuotePart {
-  id             String          @id @default(cuid())
-  appelChargesId String
-  lotId          String
-  montant        Float
-  statut         QuotePartStatut @default(EN_ATTENTE)
-  datePaiement   DateTime?
+  id                    String          @id @default(cuid())
+  appelChargesId        String
+  lotId                 String
+  montant               Float
+  statut                QuotePartStatut @default(EN_ATTENTE)
+  datePaiement          DateTime?
   // Champs prévus pour la Phase 2 (paiement en ligne CMI/Stripe) — nullable, pas de logique branchée en V1
   stripePaymentIntentId String?
   cmiRef                String?
@@ -273,11 +332,11 @@ model QuotePart {
 // Historique des relances (déclenchement manuel en V1 — l'envoi email/SMS réel
 // nécessite une clé Resend/Twilio non encore configurée, voir section 7.2 du CDC).
 model Relance {
-  id             String   @id @default(cuid())
-  quotePartId    String
-  type           String
-  envoyeeAt      DateTime @default(now())
-  envoyeeParId   String?
+  id           String   @id @default(cuid())
+  quotePartId  String
+  type         String
+  envoyeeAt    DateTime @default(now())
+  envoyeeParId String?
 
   quotePart  QuotePart @relation(fields: [quotePartId], references: [id], onDelete: Cascade)
   envoyeePar User?     @relation(fields: [envoyeeParId], references: [id])
@@ -287,17 +346,17 @@ model Relance {
 }
 
 model Document {
-  id          String              @id @default(cuid())
+  id          String             @id @default(cuid())
   nom         String
   type        String
   url         String
   taille      Int
-  dossier     DocumentDossier     @default(DIVERS)
-  visibilite  DocumentVisibilite  @default(COMMUN)
+  dossier     DocumentDossier    @default(DIVERS)
+  visibilite  DocumentVisibilite @default(COMMUN)
   residenceId String
   lotId       String?
   uploaderId  String
-  createdAt   DateTime            @default(now())
+  createdAt   DateTime           @default(now())
 
   residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
   lot       Lot?      @relation(fields: [lotId], references: [id], onDelete: Cascade)
@@ -312,14 +371,14 @@ model Document {
 // ART24 = majorité des tantièmes votants ; ART25 = majorité absolue des tantièmes
 // de la résidence ; ART26 = double majorité approximée aux 2/3 des tantièmes.
 model Ag {
-  id                  String   @id @default(cuid())
-  date                DateTime
-  lieu                String
-  type                AgType   @default(ORDINAIRE)
-  statut              AgStatut @default(PLANIFIEE)
-  convocationEnvoyee  Boolean  @default(false)
-  residenceId         String
-  createdAt           DateTime @default(now())
+  id                 String   @id @default(cuid())
+  date               DateTime
+  lieu               String
+  type               AgType   @default(ORDINAIRE)
+  statut             AgStatut @default(PLANIFIEE)
+  convocationEnvoyee Boolean  @default(false)
+  residenceId        String
+  createdAt          DateTime @default(now())
 
   residence   Residence    @relation(fields: [residenceId], references: [id], onDelete: Cascade)
   resolutions Resolution[]
@@ -367,15 +426,15 @@ model Vote {
 // et rapprochement bancaire OFX, différés). Catégorie en texte libre plutôt qu'un
 // plan comptable structuré, pour rester dans le périmètre MVP+Phase2.
 model EcritureComptable {
-  id           String       @id @default(cuid())
-  date         DateTime
-  libelle      String
-  type         EcritureType
-  montant      Float
-  categorie    String
+  id             String       @id @default(cuid())
+  date           DateTime
+  libelle        String
+  type           EcritureType
+  montant        Float
+  categorie      String
   pieceJointeUrl String?
-  residenceId  String
-  createdAt    DateTime     @default(now())
+  residenceId    String
+  createdAt      DateTime     @default(now())
 
   residence Residence @relation(fields: [residenceId], references: [id], onDelete: Cascade)
 

@@ -84,6 +84,12 @@ export function LoginForm() {
           Créer mon compte
         </Link>
       </p>
+      <p className="text-center text-sm text-text-secondary">
+        Besoin d&apos;aide ?{" "}
+        <Link href="/contact" className="text-primary hover:underline">
+          Nous contacter
+        </Link>
+      </p>
     </form>
   );
 }
