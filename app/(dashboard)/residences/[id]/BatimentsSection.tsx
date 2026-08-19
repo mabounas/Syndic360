@@ -463,16 +463,14 @@ function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => voi
           {lot.proprietaires.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium text-text-secondary">Occupant(s)</p>
-              <div className="rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
+              <div className="space-y-2 rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
                 {lot.proprietaires.map((p) => (
-                  <div key={p.user.id} className="text-text-secondary">
+                  <div key={p.user.id} className="grid grid-cols-3 gap-2">
                     <span className="font-medium text-text-primary">
                       {p.user.prenom} {p.user.nom}
-                    </span>{" "}
-                    <span className="text-xs">
-                      ({OCCUPANT_LABELS[p.typeOccupant]}
-                      {p.user.telephone ? ` · ${p.user.telephone}` : ""})
                     </span>
+                    <span className="text-text-secondary">{OCCUPANT_LABELS[p.typeOccupant]}</span>
+                    <span className="text-text-secondary">{p.user.telephone ?? "—"}</span>
                   </div>
                 ))}
               </div>
@@ -531,14 +529,8 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
           {lot.proprietaires.length > 0 ? (
             <div className="space-y-0.5">
               {lot.proprietaires.map((p) => (
-                <div key={p.user.id} className="text-text-secondary">
-                  <span className="font-medium text-text-primary">
-                    {p.user.prenom} {p.user.nom}
-                  </span>{" "}
-                  <span className="text-xs">
-                    ({OCCUPANT_LABELS[p.typeOccupant]}
-                    {p.user.telephone ? ` · ${p.user.telephone}` : ""})
-                  </span>
+                <div key={p.user.id} className="font-medium text-text-primary">
+                  {p.user.prenom} {p.user.nom}
                 </div>
               ))}
             </div>
@@ -553,6 +545,28 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
             </button>
           )}
         </td>
+        <td className={cellClass}>
+          {lot.proprietaires.length > 0 && (
+            <div className="space-y-0.5">
+              {lot.proprietaires.map((p) => (
+                <div key={p.user.id} className="text-text-secondary">
+                  {OCCUPANT_LABELS[p.typeOccupant]}
+                </div>
+              ))}
+            </div>
+          )}
+        </td>
+        <td className={cellClass}>
+          {lot.proprietaires.length > 0 && (
+            <div className="space-y-0.5">
+              {lot.proprietaires.map((p) => (
+                <div key={p.user.id} className="text-text-secondary">
+                  {p.user.telephone ?? "—"}
+                </div>
+              ))}
+            </div>
+          )}
+        </td>
         <td className={cn(cellClass, "text-right")}>
           <button
             onClick={() => setModalOpen(true)}
@@ -565,7 +579,7 @@ function LotTableRow({ lot }: { lot: LotWithOwners }) {
       </tr>
       {assigning && (
         <tr className="border-t border-border">
-          <td colSpan={9} className="px-3 py-2.5">
+          <td colSpan={11} className="px-3 py-2.5">
             <AssignProprietaireForm lotId={lot.id} onDone={() => setAssigning(false)} />
           </td>
         </tr>
@@ -593,6 +607,8 @@ function LotsTable({ lots }: { lots: LotWithOwners[] }) {
             <th className={cellClass}>Tant. charges</th>
             <th className={cellClass}>Forfait</th>
             <th className={cellClass}>Occupant(s)</th>
+            <th className={cellClass}>Statut</th>
+            <th className={cellClass}>Téléphone</th>
             <th className={cellClass} />
           </tr>
         </thead>
