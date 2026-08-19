@@ -26,6 +26,148 @@ const cellClass = "px-3 py-2.5 align-top";
 const inputClass =
   "w-full rounded-[var(--radius-button)] border border-border px-2 py-1 text-sm outline-none focus:border-primary";
 
+type LotFormState = {
+  numero: string;
+  type: (typeof LOT_TYPES)[number]["value"];
+  etage: string;
+  surface: string;
+  tantiemesGeneraux: string;
+  tantiemesCharges: string;
+  montantForfaitaire: string;
+};
+
+const EMPTY_LOT_FORM: LotFormState = {
+  numero: "",
+  type: "APPARTEMENT",
+  etage: "",
+  surface: "",
+  tantiemesGeneraux: "",
+  tantiemesCharges: "",
+  montantForfaitaire: "",
+};
+
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+          <button onClick={onClose} className="text-text-secondary hover:text-danger">
+            <X size={18} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function LotFormFields({
+  form,
+  setForm,
+}: {
+  form: LotFormState;
+  setForm: (form: LotFormState) => void;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Numéro</label>
+          <input
+            required
+            value={form.numero}
+            onChange={(e) => setForm({ ...form, numero: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Type</label>
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value as LotFormState["type"] })}
+            className={inputClass}
+          >
+            {LOT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Étage</label>
+          <input
+            type="number"
+            value={form.etage}
+            onChange={(e) => setForm({ ...form, etage: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Surface (m²)</label>
+          <input
+            type="number"
+            value={form.surface}
+            onChange={(e) => setForm({ ...form, surface: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes généraux</label>
+          <input
+            required
+            type="number"
+            value={form.tantiemesGeneraux}
+            onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes charges</label>
+          <input
+            required
+            type="number"
+            value={form.tantiemesCharges}
+            onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-text-secondary">Montant forfaitaire (MAD)</label>
+        <input
+          type="number"
+          value={form.montantForfaitaire}
+          onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
+          className={inputClass}
+        />
+      </div>
+    </>
+  );
+}
+
 function NewBatimentForm({ residenceId }: { residenceId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -94,125 +236,72 @@ function NewBatimentForm({ residenceId }: { residenceId: string }) {
   );
 }
 
-function NewLotForm({ batimentId }: { batimentId: string }) {
+function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [form, setForm] = useState({
-    numero: "",
-    type: "APPARTEMENT" as (typeof LOT_TYPES)[number]["value"],
-    surface: "",
-    tantiemesGeneraux: "",
-    tantiemesCharges: "",
-    etage: "",
-    montantForfaitaire: "",
-  });
+  const [form, setForm] = useState<LotFormState>(EMPTY_LOT_FORM);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
-    await fetch("/api/lots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        batimentId,
-        numero: form.numero,
-        type: form.type,
-        surface: form.surface ? Number(form.surface) : undefined,
-        tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
-        tantiemesCharges: Number(form.tantiemesCharges || 0),
-        etage: form.etage ? Number(form.etage) : undefined,
-        montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
-      }),
-    });
-    setPending(false);
-    setOpen(false);
-    router.refresh();
+    try {
+      const res = await fetch("/api/lots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batimentId,
+          numero: form.numero,
+          type: form.type,
+          surface: form.surface ? Number(form.surface) : undefined,
+          tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
+          tantiemesCharges: Number(form.tantiemesCharges || 0),
+          etage: form.etage ? Number(form.etage) : undefined,
+          montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
+        }),
+      });
+      if (res.ok) {
+        router.refresh();
+        onClose();
+      }
+    } finally {
+      setPending(false);
+    }
   }
 
-  if (!open) {
-    return (
+  return (
+    <Modal title="Ajouter un lot" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <LotFormFields form={form} setForm={setForm} />
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+          >
+            {pending ? "Ajout..." : "Ajouter"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function NewLotForm({ batimentId }: { batimentId: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 text-xs text-primary hover:underline"
       >
         <Plus size={12} /> Lot
       </button>
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="mt-2 flex flex-wrap items-end gap-2 rounded-[var(--radius-button)] bg-bg-page p-3">
-      <input
-        required
-        placeholder="Numéro"
-        value={form.numero}
-        onChange={(e) => setForm({ ...form, numero: e.target.value })}
-        className="w-24 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value as typeof form.type })}
-        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      >
-        {LOT_TYPES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      <input
-        placeholder="Étage"
-        type="number"
-        value={form.etage}
-        onChange={(e) => setForm({ ...form, etage: e.target.value })}
-        className="w-20 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <input
-        placeholder="Surface m²"
-        type="number"
-        value={form.surface}
-        onChange={(e) => setForm({ ...form, surface: e.target.value })}
-        className="w-24 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <input
-        required
-        placeholder="Tantièmes généraux"
-        type="number"
-        value={form.tantiemesGeneraux}
-        onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
-        className="w-32 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <input
-        required
-        placeholder="Tantièmes charges"
-        type="number"
-        value={form.tantiemesCharges}
-        onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
-        className="w-32 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <input
-        placeholder="Montant forfaitaire (MAD)"
-        type="number"
-        value={form.montantForfaitaire}
-        onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
-        className="w-40 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-[var(--radius-button)] bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
-      >
-        Ajouter
-      </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="text-sm text-text-secondary hover:underline"
-      >
-        Annuler
-      </button>
-    </form>
+      {open && <NewLotModal batimentId={batimentId} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -312,17 +401,7 @@ function AssignProprietaireForm({ lotId, onDone }: { lotId: string; onDone: () =
   );
 }
 
-type LotEditState = {
-  numero: string;
-  type: (typeof LOT_TYPES)[number]["value"];
-  etage: string;
-  surface: string;
-  tantiemesGeneraux: string;
-  tantiemesCharges: string;
-  montantForfaitaire: string;
-};
-
-function toEditState(lot: LotWithOwners): LotEditState {
+function toEditState(lot: LotWithOwners): LotFormState {
   return {
     numero: lot.numero,
     type: lot.type,
@@ -337,7 +416,7 @@ function toEditState(lot: LotWithOwners): LotEditState {
 function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => void }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [form, setForm] = useState<LotEditState>(() => toEditState(lot));
+  const [form, setForm] = useState<LotFormState>(() => toEditState(lot));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -366,132 +445,41 @@ function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => voi
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-primary">Modifier le lot {lot.numero}</h3>
-          <button onClick={onClose} className="text-text-secondary hover:text-danger">
-            <X size={18} />
+    <Modal title={`Modifier le lot ${lot.numero}`} onClose={onClose}>
+      <form onSubmit={save} className="space-y-4">
+        <LotFormFields form={form} setForm={setForm} />
+
+        {lot.proprietaires.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-medium text-text-secondary">Occupant(s)</p>
+            <div className="space-y-2 rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
+              {lot.proprietaires.map((p) => (
+                <div key={p.user.id} className="grid grid-cols-3 gap-2">
+                  <span className="font-medium text-text-primary">
+                    {p.user.prenom} {p.user.nom}
+                  </span>
+                  <span className="text-text-secondary">{OCCUPANT_LABELS[p.typeOccupant]}</span>
+                  <span className="text-text-secondary">{p.user.telephone ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+          >
+            {pending ? "Enregistrement..." : "Enregistrer"}
           </button>
         </div>
-
-        <form onSubmit={save} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Numéro</label>
-              <input
-                required
-                value={form.numero}
-                onChange={(e) => setForm({ ...form, numero: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Type</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as LotEditState["type"] })}
-                className={inputClass}
-              >
-                {LOT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Étage</label>
-              <input
-                type="number"
-                value={form.etage}
-                onChange={(e) => setForm({ ...form, etage: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Surface (m²)</label>
-              <input
-                type="number"
-                value={form.surface}
-                onChange={(e) => setForm({ ...form, surface: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes généraux</label>
-              <input
-                type="number"
-                value={form.tantiemesGeneraux}
-                onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes charges</label>
-              <input
-                type="number"
-                value={form.tantiemesCharges}
-                onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Montant forfaitaire (MAD)</label>
-            <input
-              type="number"
-              value={form.montantForfaitaire}
-              onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
-              className={inputClass}
-            />
-          </div>
-
-          {lot.proprietaires.length > 0 && (
-            <div>
-              <p className="mb-1 text-xs font-medium text-text-secondary">Occupant(s)</p>
-              <div className="space-y-2 rounded-[var(--radius-button)] bg-bg-page p-2.5 text-sm">
-                {lot.proprietaires.map((p) => (
-                  <div key={p.user.id} className="grid grid-cols-3 gap-2">
-                    <span className="font-medium text-text-primary">
-                      {p.user.prenom} {p.user.nom}
-                    </span>
-                    <span className="text-text-secondary">{OCCUPANT_LABELS[p.typeOccupant]}</span>
-                    <span className="text-text-secondary">{p.user.telephone ?? "—"}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
-            >
-              {pending ? "Enregistrement..." : "Enregistrer"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
