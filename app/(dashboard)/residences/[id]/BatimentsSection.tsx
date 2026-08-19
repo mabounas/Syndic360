@@ -62,7 +62,7 @@ function Modal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
+        className="w-full max-w-2xl rounded-[var(--radius-card)] border border-border bg-bg-card p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
@@ -85,7 +85,7 @@ function LotFormFields({
 }) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Numéro</label>
           <input
@@ -109,9 +109,6 @@ function LotFormFields({
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Étage</label>
           <input
@@ -121,6 +118,9 @@ function LotFormFields({
             className={inputClass}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Surface (m²)</label>
           <input
@@ -130,9 +130,6 @@ function LotFormFields({
             className={inputClass}
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Tantièmes généraux</label>
           <input
@@ -155,14 +152,16 @@ function LotFormFields({
         </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-medium text-text-secondary">Montant forfaitaire (MAD)</label>
-        <input
-          type="number"
-          value={form.montantForfaitaire}
-          onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
-          className={inputClass}
-        />
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Montant forfaitaire (MAD)</label>
+          <input
+            type="number"
+            value={form.montantForfaitaire}
+            onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
+            className={inputClass}
+          />
+        </div>
       </div>
     </>
   );
@@ -242,7 +241,6 @@ type OccupantFormState = {
   email: string;
   telephone: string;
   typeOccupant: "PROPRIETAIRE" | "LOCATAIRE";
-  password: string;
 };
 
 const EMPTY_OCCUPANT_FORM: OccupantFormState = {
@@ -251,7 +249,6 @@ const EMPTY_OCCUPANT_FORM: OccupantFormState = {
   email: "",
   telephone: "",
   typeOccupant: "PROPRIETAIRE",
-  password: "",
 };
 
 function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () => void }) {
@@ -336,7 +333,7 @@ function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () 
             Occupant (optionnel)
           </p>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-text-secondary">Prénom</label>
                 <input
@@ -350,25 +347,6 @@ function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () 
                 <input
                   value={occupant.nom}
                   onChange={(e) => setOccupant({ ...occupant, nom: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Email</label>
-              <input
-                type="email"
-                value={occupant.email}
-                onChange={(e) => setOccupant({ ...occupant, email: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-text-secondary">Téléphone</label>
-                <input
-                  value={occupant.telephone}
-                  onChange={(e) => setOccupant({ ...occupant, telephone: e.target.value })}
                   className={inputClass}
                 />
               </div>
@@ -386,19 +364,29 @@ function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () 
                 </select>
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-text-secondary">Mot de passe (optionnel)</label>
-              <input
-                type="password"
-                value={occupant.password}
-                onChange={(e) => setOccupant({ ...occupant, password: e.target.value })}
-                className={inputClass}
-              />
-              <p className="mt-1 text-xs text-text-secondary">
-                Laissez vide pour que la personne active elle-même son compte sur{" "}
-                <span className="font-medium">/register</span> (choix « Copropriétaire »).
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Email</label>
+                <input
+                  type="email"
+                  value={occupant.email}
+                  onChange={(e) => setOccupant({ ...occupant, email: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Téléphone</label>
+                <input
+                  value={occupant.telephone}
+                  onChange={(e) => setOccupant({ ...occupant, telephone: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
             </div>
+            <p className="text-xs text-text-secondary">
+              La personne active elle-même son compte sur <span className="font-medium">/register</span> (choix
+              « Copropriétaire »).
+            </p>
           </div>
         </div>
 
