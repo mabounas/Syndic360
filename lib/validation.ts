@@ -44,7 +44,13 @@ export const lotSchema = z.object({
 export type LotInput = z.infer<typeof lotSchema>;
 
 export const lotUpdateSchema = z.object({
-  montantForfaitaire: z.coerce.number().min(0),
+  numero: z.string().min(1, "Numéro requis").optional(),
+  type: z.enum(["APPARTEMENT", "COMMERCE", "PARKING", "CAVE"]).optional(),
+  surface: z.coerce.number().min(0).nullable().optional(),
+  tantiemesGeneraux: z.coerce.number().int().min(0).optional(),
+  tantiemesCharges: z.coerce.number().int().min(0).optional(),
+  etage: z.coerce.number().int().nullable().optional(),
+  montantForfaitaire: z.coerce.number().min(0).nullable().optional(),
 });
 export type LotUpdateInput = z.infer<typeof lotUpdateSchema>;
 

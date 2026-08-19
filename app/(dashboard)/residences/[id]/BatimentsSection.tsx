@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserPlus, Pencil } from "lucide-react";
+import { Plus, UserPlus, Pencil, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { BatimentWithLots, LotWithOwners } from "./types";
 
 const LOT_TYPES = [
@@ -12,10 +13,18 @@ const LOT_TYPES = [
   { value: "CAVE", label: "Cave" },
 ] as const;
 
+const LOT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  LOT_TYPES.map((t) => [t.value, t.label])
+);
+
 const OCCUPANT_LABELS: Record<string, string> = {
   PROPRIETAIRE: "Propriétaire",
   LOCATAIRE: "Locataire",
 };
+
+const cellClass = "px-3 py-2.5 align-top";
+const inputClass =
+  "w-full rounded-[var(--radius-button)] border border-border px-2 py-1 text-sm outline-none focus:border-primary";
 
 function NewBatimentForm({ residenceId }: { residenceId: string }) {
   const router = useRouter();
@@ -207,60 +216,8 @@ function NewLotForm({ batimentId }: { batimentId: string }) {
   );
 }
 
-function EditForfaitForm({ lotId, montantForfaitaire }: { lotId: string; montantForfaitaire: number | null }) {
+function AssignProprietaireForm({ lotId, onDone }: { lotId: string; onDone: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [value, setValue] = useState(montantForfaitaire?.toString() ?? "");
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setPending(true);
-    await fetch(`/api/lots/${lotId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ montantForfaitaire: Number(value || 0) }),
-    });
-    setPending(false);
-    setOpen(false);
-    router.refresh();
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-text-secondary hover:text-primary"
-        title="Modifier le montant forfaitaire"
-      >
-        {montantForfaitaire !== null ? `${montantForfaitaire} MAD/forfait` : "Forfait non défini"}
-        <Pencil size={11} />
-      </button>
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="flex items-center gap-1">
-      <input
-        autoFocus
-        type="number"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="w-24 rounded-[var(--radius-button)] border border-border px-1.5 py-0.5 text-xs outline-none focus:border-primary"
-      />
-      <button type="submit" disabled={pending} className="text-xs text-primary hover:underline">
-        OK
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="text-xs text-text-secondary hover:underline">
-        Annuler
-      </button>
-    </form>
-  );
-}
-
-function AssignProprietaireForm({ lotId }: { lotId: string }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -287,23 +244,12 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
       setError(body?.error ?? "Erreur.");
       return;
     }
-    setOpen(false);
+    onDone();
     router.refresh();
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-xs text-primary hover:underline"
-      >
-        <UserPlus size={12} /> Assigner un occupant
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={submit} className="mt-2 flex flex-wrap items-end gap-2 rounded-[var(--radius-button)] bg-bg-page p-3">
+    <form onSubmit={submit} className="flex flex-wrap items-end gap-2 rounded-[var(--radius-button)] bg-bg-page p-3">
       <input
         required
         placeholder="Prénom"
@@ -354,11 +300,7 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
       >
         Créer
       </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="text-sm text-text-secondary hover:underline"
-      >
+      <button type="button" onClick={onDone} className="text-sm text-text-secondary hover:underline">
         Annuler
       </button>
       <p className="w-full text-xs text-text-secondary">
@@ -370,32 +312,248 @@ function AssignProprietaireForm({ lotId }: { lotId: string }) {
   );
 }
 
-function LotRow({ lot }: { lot: LotWithOwners }) {
+type LotEditState = {
+  numero: string;
+  type: (typeof LOT_TYPES)[number]["value"];
+  etage: string;
+  surface: string;
+  tantiemesGeneraux: string;
+  tantiemesCharges: string;
+  montantForfaitaire: string;
+};
+
+function toEditState(lot: LotWithOwners): LotEditState {
+  return {
+    numero: lot.numero,
+    type: lot.type,
+    etage: lot.etage?.toString() ?? "",
+    surface: lot.surface?.toString() ?? "",
+    tantiemesGeneraux: lot.tantiemesGeneraux.toString(),
+    tantiemesCharges: lot.tantiemesCharges.toString(),
+    montantForfaitaire: lot.montantForfaitaire?.toString() ?? "",
+  };
+}
+
+function LotTableRow({ lot }: { lot: LotWithOwners }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState<LotEditState>(() => toEditState(lot));
+
+  function startEdit() {
+    setForm(toEditState(lot));
+    setEditing(true);
+  }
+
+  async function save() {
+    setPending(true);
+    try {
+      const res = await fetch(`/api/lots/${lot.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero: form.numero,
+          type: form.type,
+          etage: form.etage ? Number(form.etage) : null,
+          surface: form.surface ? Number(form.surface) : null,
+          tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
+          tantiemesCharges: Number(form.tantiemesCharges || 0),
+          montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : null,
+        }),
+      });
+      if (res.ok) {
+        setEditing(false);
+        router.refresh();
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
-    <div className="border-t border-border py-2 first:border-t-0">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm">
-          <span className="font-medium text-text-primary">{lot.numero}</span>{" "}
-          <span className="text-text-secondary">
-            · {lot.type.toLowerCase()}
-            {lot.etage !== null ? ` · étage ${lot.etage}` : ""}
-            {lot.surface ? ` · ${lot.surface} m²` : ""} · {lot.tantiemesCharges}‰ charges ·{" "}
-          </span>
-          <EditForfaitForm lotId={lot.id} montantForfaitaire={lot.montantForfaitaire} />
-        </div>
-        <div className="text-sm text-text-secondary">
-          {lot.proprietaires.length > 0
-            ? lot.proprietaires
-                .map(
-                  (p) =>
-                    `${p.user.prenom} ${p.user.nom} (${OCCUPANT_LABELS[p.typeOccupant]}${
-                      p.user.telephone ? ` · ${p.user.telephone}` : ""
-                    })`
-                )
-                .join(", ")
-            : <AssignProprietaireForm lotId={lot.id} />}
-        </div>
-      </div>
+    <>
+      <tr className={cn("border-t border-border", editing && "bg-bg-page")}>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              value={form.numero}
+              onChange={(e) => setForm({ ...form, numero: e.target.value })}
+              className={cn(inputClass, "w-20")}
+            />
+          ) : (
+            <span className="font-medium text-text-primary">{lot.numero}</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as LotEditState["type"] })}
+              className={inputClass}
+            >
+              {LOT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-text-secondary">{LOT_TYPE_LABELS[lot.type]}</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              type="number"
+              value={form.etage}
+              onChange={(e) => setForm({ ...form, etage: e.target.value })}
+              className={cn(inputClass, "w-16")}
+            />
+          ) : (
+            <span className="text-text-secondary">{lot.etage ?? "—"}</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              type="number"
+              value={form.surface}
+              onChange={(e) => setForm({ ...form, surface: e.target.value })}
+              className={cn(inputClass, "w-20")}
+            />
+          ) : (
+            <span className="text-text-secondary">{lot.surface ? `${lot.surface} m²` : "—"}</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              type="number"
+              value={form.tantiemesGeneraux}
+              onChange={(e) => setForm({ ...form, tantiemesGeneraux: e.target.value })}
+              className={cn(inputClass, "w-20")}
+            />
+          ) : (
+            <span className="text-text-secondary">{lot.tantiemesGeneraux}‰</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              type="number"
+              value={form.tantiemesCharges}
+              onChange={(e) => setForm({ ...form, tantiemesCharges: e.target.value })}
+              className={cn(inputClass, "w-20")}
+            />
+          ) : (
+            <span className="text-text-secondary">{lot.tantiemesCharges}‰</span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {editing ? (
+            <input
+              type="number"
+              value={form.montantForfaitaire}
+              onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
+              className={cn(inputClass, "w-24")}
+            />
+          ) : (
+            <span className="text-text-secondary">
+              {lot.montantForfaitaire !== null ? `${lot.montantForfaitaire} MAD` : "—"}
+            </span>
+          )}
+        </td>
+        <td className={cellClass}>
+          {lot.proprietaires.length > 0 ? (
+            <div className="space-y-0.5">
+              {lot.proprietaires.map((p) => (
+                <div key={p.user.id} className="text-text-secondary">
+                  <span className="font-medium text-text-primary">
+                    {p.user.prenom} {p.user.nom}
+                  </span>{" "}
+                  <span className="text-xs">
+                    ({OCCUPANT_LABELS[p.typeOccupant]}
+                    {p.user.telephone ? ` · ${p.user.telephone}` : ""})
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : assigning ? (
+            <span className="text-xs text-text-secondary">Formulaire ci-dessous</span>
+          ) : (
+            <button
+              onClick={() => setAssigning(true)}
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <UserPlus size={12} /> Assigner un occupant
+            </button>
+          )}
+        </td>
+        <td className={cn(cellClass, "text-right")}>
+          {editing ? (
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={save}
+                disabled={pending}
+                title="Enregistrer"
+                className="text-success hover:opacity-70 disabled:opacity-50"
+              >
+                <Check size={16} />
+              </button>
+              <button onClick={() => setEditing(false)} title="Annuler" className="text-text-secondary hover:text-danger">
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={startEdit}
+              title="Modifier ce lot"
+              className="flex items-center gap-1 text-xs text-text-secondary hover:text-primary"
+            >
+              <Pencil size={13} /> Modifier
+            </button>
+          )}
+        </td>
+      </tr>
+      {assigning && (
+        <tr className="border-t border-border">
+          <td colSpan={9} className="px-3 py-2.5">
+            <AssignProprietaireForm lotId={lot.id} onDone={() => setAssigning(false)} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function LotsTable({ lots }: { lots: LotWithOwners[] }) {
+  if (lots.length === 0) {
+    return <p className="py-2 text-sm text-text-secondary">Aucun lot.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs font-medium uppercase tracking-wide text-text-secondary">
+            <th className={cellClass}>Lot</th>
+            <th className={cellClass}>Type</th>
+            <th className={cellClass}>Étage</th>
+            <th className={cellClass}>Surface</th>
+            <th className={cellClass}>Tant. généraux</th>
+            <th className={cellClass}>Tant. charges</th>
+            <th className={cellClass}>Forfait</th>
+            <th className={cellClass}>Occupant(s)</th>
+            <th className={cellClass} />
+          </tr>
+        </thead>
+        <tbody>
+          {lots.map((lot) => (
+            <LotTableRow key={lot.id} lot={lot} />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -422,14 +580,7 @@ export function BatimentsSection({
             </p>
             <NewLotForm batimentId={batiment.id} />
           </div>
-          <div>
-            {batiment.lots.map((lot) => (
-              <LotRow key={lot.id} lot={lot} />
-            ))}
-            {batiment.lots.length === 0 && (
-              <p className="py-2 text-sm text-text-secondary">Aucun lot.</p>
-            )}
-          </div>
+          <LotsTable lots={batiment.lots} />
         </div>
       ))}
       {batiments.length === 0 && (

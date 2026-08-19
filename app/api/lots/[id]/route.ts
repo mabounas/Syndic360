@@ -19,12 +19,15 @@ export async function PATCH(
     const body = await request.json().catch(() => null);
     const parsed = lotUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Données invalides." },
+        { status: 400 }
+      );
     }
 
     const lot = await prisma.lot.update({
       where: { id },
-      data: { montantForfaitaire: parsed.data.montantForfaitaire },
+      data: parsed.data,
     });
     return NextResponse.json(lot);
   } catch (error) {
