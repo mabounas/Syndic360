@@ -236,33 +236,86 @@ function NewBatimentForm({ residenceId }: { residenceId: string }) {
   );
 }
 
+type OccupantFormState = {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  typeOccupant: "PROPRIETAIRE" | "LOCATAIRE";
+  password: string;
+};
+
+const EMPTY_OCCUPANT_FORM: OccupantFormState = {
+  nom: "",
+  prenom: "",
+  email: "",
+  telephone: "",
+  typeOccupant: "PROPRIETAIRE",
+  password: "",
+};
+
 function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () => void }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LotFormState>(EMPTY_LOT_FORM);
+  const [occupant, setOccupant] = useState<OccupantFormState>(EMPTY_OCCUPANT_FORM);
+  const [lotCreatedId, setLotCreatedId] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    const occupantFilled = occupant.nom.trim() || occupant.prenom.trim() || occupant.email.trim();
+    const occupantValid = occupant.nom.trim() && occupant.prenom.trim() && occupant.email.trim();
+    if (occupantFilled && !occupantValid) {
+      setError("Prénom, nom et email sont requis pour assigner un occupant.");
+      return;
+    }
+
     setPending(true);
     try {
-      const res = await fetch("/api/lots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          batimentId,
-          numero: form.numero,
-          type: form.type,
-          surface: form.surface ? Number(form.surface) : undefined,
-          tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
-          tantiemesCharges: Number(form.tantiemesCharges || 0),
-          etage: form.etage ? Number(form.etage) : undefined,
-          montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
-        }),
-      });
-      if (res.ok) {
-        router.refresh();
-        onClose();
+      let lotId = lotCreatedId;
+      if (!lotId) {
+        const res = await fetch("/api/lots", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            batimentId,
+            numero: form.numero,
+            type: form.type,
+            surface: form.surface ? Number(form.surface) : undefined,
+            tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
+            tantiemesCharges: Number(form.tantiemesCharges || 0),
+            etage: form.etage ? Number(form.etage) : undefined,
+            montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          setError(body?.error ?? "Erreur lors de la création du lot.");
+          return;
+        }
+        const lot = await res.json();
+        lotId = lot.id;
+        setLotCreatedId(lotId);
       }
+
+      if (occupantValid) {
+        const res2 = await fetch(`/api/lots/${lotId}/proprietaires`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(occupant),
+        });
+        if (!res2.ok) {
+          const body = await res2.json().catch(() => null);
+          setError(body?.error ?? "Le lot a été créé, mais l'assignation de l'occupant a échoué.");
+          return;
+        }
+      }
+
+      router.refresh();
+      onClose();
     } finally {
       setPending(false);
     }
@@ -271,7 +324,86 @@ function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () 
   return (
     <Modal title="Ajouter un lot" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <LotFormFields form={form} setForm={setForm} />
+        <fieldset disabled={!!lotCreatedId} className="space-y-4 disabled:opacity-50">
+          <LotFormFields form={form} setForm={setForm} />
+        </fieldset>
+        {lotCreatedId && (
+          <p className="text-xs text-success">Lot {form.numero} créé. Complétez l&apos;occupant ci-dessous.</p>
+        )}
+
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-text-secondary">
+            Occupant (optionnel)
+          </p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Prénom</label>
+                <input
+                  value={occupant.prenom}
+                  onChange={(e) => setOccupant({ ...occupant, prenom: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Nom</label>
+                <input
+                  value={occupant.nom}
+                  onChange={(e) => setOccupant({ ...occupant, nom: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Email</label>
+              <input
+                type="email"
+                value={occupant.email}
+                onChange={(e) => setOccupant({ ...occupant, email: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Téléphone</label>
+                <input
+                  value={occupant.telephone}
+                  onChange={(e) => setOccupant({ ...occupant, telephone: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-secondary">Statut</label>
+                <select
+                  value={occupant.typeOccupant}
+                  onChange={(e) =>
+                    setOccupant({ ...occupant, typeOccupant: e.target.value as OccupantFormState["typeOccupant"] })
+                  }
+                  className={inputClass}
+                >
+                  <option value="PROPRIETAIRE">Propriétaire</option>
+                  <option value="LOCATAIRE">Locataire</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Mot de passe (optionnel)</label>
+              <input
+                type="password"
+                value={occupant.password}
+                onChange={(e) => setOccupant({ ...occupant, password: e.target.value })}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-text-secondary">
+                Laissez vide pour que la personne active elle-même son compte sur{" "}
+                <span className="font-medium">/register</span> (choix « Copropriétaire »).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
             Annuler
