@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Building2, DoorOpen, AlertTriangle, Wallet } from "lucide-react";
+import { Building2, DoorOpen, AlertTriangle, Wallet, TrendingUp, History } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isStaffRole, residenceScopeWhere } from "@/lib/rbac";
@@ -15,6 +15,12 @@ export default async function DashboardPage() {
   }
 
   const where = residenceScopeWhere(session);
+  const lotFilter = { batiment: { residence: where } };
+
+  const now = new Date();
+  const anneeActuelle = now.getFullYear();
+  const startOfMonth = new Date(anneeActuelle, now.getMonth(), 1);
+  const startOfYear = new Date(anneeActuelle, 0, 1);
 
   const residences = await prisma.residence.findMany({
     where,
@@ -22,15 +28,46 @@ export default async function DashboardPage() {
     select: { id: true, nom: true, ville: true, nbLots: true },
   });
 
-  const [lotsCount, impayesCount] = await Promise.all([
-    prisma.lot.count({ where: { batiment: { residence: where } } }),
-    prisma.quotePart.count({
-      where: {
-        statut: "EN_RETARD",
-        lot: { batiment: { residence: where } },
-      },
+  const [
+    lotsCount,
+    impayesCount,
+    ecrituresRecettes,
+    ecrituresDepenses,
+    payeMois,
+    payeAnnee,
+    quotePartsImpayees,
+  ] = await Promise.all([
+    prisma.lot.count({ where: lotFilter }),
+    prisma.quotePart.count({ where: { statut: "EN_RETARD", lot: lotFilter } }),
+    prisma.ecritureComptable.aggregate({
+      where: { type: "RECETTE", residence: where },
+      _sum: { montant: true },
+    }),
+    prisma.ecritureComptable.aggregate({
+      where: { type: "DEPENSE", residence: where },
+      _sum: { montant: true },
+    }),
+    prisma.quotePart.aggregate({
+      where: { statut: "PAYE", datePaiement: { gte: startOfMonth }, lot: lotFilter },
+      _sum: { montant: true },
+    }),
+    prisma.quotePart.aggregate({
+      where: { statut: "PAYE", datePaiement: { gte: startOfYear }, lot: lotFilter },
+      _sum: { montant: true },
+    }),
+    prisma.quotePart.findMany({
+      where: { statut: { not: "PAYE" }, lot: lotFilter },
+      select: { montant: true, appelCharges: { select: { budget: { select: { annee: true } } } } },
     }),
   ]);
+
+  const tresorerie = (ecrituresRecettes._sum.montant ?? 0) - (ecrituresDepenses._sum.montant ?? 0);
+  const totalImpayes = quotePartsImpayees.reduce((sum, qp) => sum + qp.montant, 0);
+  const totalImpayesAnciens = quotePartsImpayees
+    .filter((qp) => qp.appelCharges.budget.annee < anneeActuelle)
+    .reduce((sum, qp) => sum + qp.montant, 0);
+
+  const mad = (n: number) => `${n.toLocaleString("fr-MA")} MAD`;
 
   return (
     <div className="space-y-6">
@@ -46,6 +83,37 @@ export default async function DashboardPage() {
           color="danger"
         />
         <KpiCard label="Plan" value={session.role === "SUPER_ADMIN" ? "Toutes organisations" : "—"} icon={Wallet} color="success" />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-text-secondary">Situation financière</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label="Solde de trésorerie" value={mad(tresorerie)} icon={Wallet} color="primary" />
+          <KpiCard
+            label={`Payé en ${now.toLocaleDateString("fr-FR", { month: "long" })}`}
+            value={mad(payeMois._sum.montant ?? 0)}
+            icon={TrendingUp}
+            color="success"
+          />
+          <KpiCard
+            label={`Cumul payé en ${anneeActuelle}`}
+            value={mad(payeAnnee._sum.montant ?? 0)}
+            icon={History}
+            color="success"
+          />
+          <KpiCard
+            label="Total des impayés"
+            value={mad(totalImpayes)}
+            caption={
+              totalImpayesAnciens > 0
+                ? `dont ${mad(totalImpayesAnciens)} sur exercices antérieurs`
+                : undefined
+            }
+            icon={AlertTriangle}
+            color="danger"
+            href="/impayes"
+          />
+        </div>
       </div>
 
       <div>

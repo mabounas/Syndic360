@@ -1,11 +1,14 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type KpiCardProps = {
   label: string;
   value: string | number;
+  caption?: string;
   icon?: LucideIcon;
   color?: "primary" | "secondary" | "success" | "danger" | "warning";
+  href?: string;
 };
 
 const COLOR_CLASSES: Record<NonNullable<KpiCardProps["color"]>, string> = {
@@ -16,9 +19,9 @@ const COLOR_CLASSES: Record<NonNullable<KpiCardProps["color"]>, string> = {
   warning: "bg-warning/10 text-warning",
 };
 
-export function KpiCard({ label, value, icon: Icon, color = "primary" }: KpiCardProps) {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-bg-card p-5">
+export function KpiCard({ label, value, caption, icon: Icon, color = "primary", href }: KpiCardProps) {
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">{label}</p>
         {Icon && (
@@ -28,6 +31,22 @@ export function KpiCard({ label, value, icon: Icon, color = "primary" }: KpiCard
         )}
       </div>
       <p className="mt-2 text-2xl font-semibold text-text-primary">{value}</p>
-    </div>
+      {caption && <p className="mt-1 text-xs text-text-secondary">{caption}</p>}
+    </>
   );
+
+  const className = cn(
+    "rounded-[var(--radius-card)] border border-border bg-bg-card p-5",
+    href && "transition hover:border-primary hover:shadow-sm"
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }

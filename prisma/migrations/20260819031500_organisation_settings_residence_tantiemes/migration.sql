@@ -1,4 +1,7 @@
 -- AlterTable
+ALTER TABLE "residences" ADD COLUMN "totalTantiemes" INTEGER NOT NULL DEFAULT 1000;
+
+-- AlterTable
 ALTER TABLE "organisations" ADD COLUMN "iban" TEXT;
 ALTER TABLE "organisations" ADD COLUMN "bic" TEXT;
 ALTER TABLE "organisations" ADD COLUMN "contactPrenom" TEXT;

@@ -104,6 +104,21 @@ export type DocumentRow = {
   lotId: string | null;
 };
 
+export type CoproprietaireFinanceRow = {
+  lotId: string;
+  lotNumero: string;
+  occupants: { nom: string; prenom: string; email: string }[];
+  soldeComptable: number;
+  situation: "A_JOUR" | "EN_ATTENTE" | "EN_RETARD";
+  historique: {
+    annee: number;
+    periode: string;
+    montant: number;
+    statut: "PAYE" | "EN_ATTENTE" | "EN_RETARD";
+    datePaiement: Date | null;
+  }[];
+};
+
 export type TicketRow = {
   id: string;
   titre: string;
