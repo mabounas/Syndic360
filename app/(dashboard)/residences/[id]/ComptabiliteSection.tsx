@@ -2,21 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { cn } from "@/lib/utils";
 import type { EcritureRow, EcheanceRow } from "./types";
-
-const CATEGORIES = [
-  "Entretien courant",
-  "Assurances",
-  "Gardiennage",
-  "Travaux",
-  "Fonds travaux",
-  "Charges perçues",
-  "Autre",
-];
 
 const DEPENSE_CATEGORIES = [
   "606 - Eau / Électricité",
@@ -30,7 +19,7 @@ const DEPENSE_CATEGORIES = [
   "Autre",
 ];
 
-const CATEGORIE_COMPTES: Record<string, string> = {
+export const CATEGORIE_COMPTES: Record<string, string> = {
   "Entretien courant": "615 - Entretien courant",
   "Assurances": "616 - Assurances",
   "Gardiennage": "621 - Gardiennage / Personnel",
@@ -40,7 +29,7 @@ const CATEGORIE_COMPTES: Record<string, string> = {
   "Autre": "658 - Autre",
 };
 
-function compteLabel(categorie: string) {
+export function compteLabel(categorie: string) {
   return CATEGORIE_COMPTES[categorie] ?? categorie;
 }
 
@@ -592,101 +581,6 @@ function DepenseModal({ residenceId, onClose }: { residenceId: string; onClose: 
   );
 }
 
-// ---------- Saisie libre (recette/dépense générique, existant) ----------
-
-function SaisieLibreForm({ residenceId }: { residenceId: string }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [form, setForm] = useState({
-    date: "",
-    libelle: "",
-    type: "DEPENSE" as "RECETTE" | "DEPENSE",
-    montant: "",
-    categorie: CATEGORIES[0],
-  });
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setPending(true);
-    await fetch("/api/ecritures", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ residenceId, ...form, montant: Number(form.montant) }),
-    });
-    setPending(false);
-    setOpen(false);
-    router.refresh();
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-sm text-text-secondary hover:text-primary hover:underline"
-      >
-        <Plus size={14} /> Saisie libre
-      </button>
-    );
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-2 rounded-[var(--radius-button)] bg-bg-page p-3">
-      <input
-        required
-        type="date"
-        value={form.date}
-        onChange={(e) => setForm({ ...form, date: e.target.value })}
-        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value as typeof form.type })}
-        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      >
-        <option value="DEPENSE">Dépense</option>
-        <option value="RECETTE">Recette</option>
-      </select>
-      <input
-        required
-        placeholder="Libellé"
-        value={form.libelle}
-        onChange={(e) => setForm({ ...form, libelle: e.target.value })}
-        className="w-48 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <select
-        value={form.categorie}
-        onChange={(e) => setForm({ ...form, categorie: e.target.value })}
-        className="rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      >
-        {CATEGORIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-      <input
-        required
-        type="number"
-        placeholder="Montant (MAD)"
-        value={form.montant}
-        onChange={(e) => setForm({ ...form, montant: e.target.value })}
-        className="w-32 rounded-[var(--radius-button)] border border-border px-2 py-1.5 text-sm outline-none focus:border-primary"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-[var(--radius-button)] bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
-      >
-        Enregistrer
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="text-sm text-text-secondary hover:underline">
-        Annuler
-      </button>
-    </form>
-  );
-}
-
 export function ComptabiliteSection({
   residenceId,
   ecritures,
@@ -773,7 +667,6 @@ export function ComptabiliteSection({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text-primary">Comptabilité</h2>
         <div className="flex items-center gap-4">
-          <SaisieLibreForm residenceId={residenceId} />
           <button
             onClick={() => setDepenseModalOpen(true)}
             className="rounded-[var(--radius-button)] bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90"
