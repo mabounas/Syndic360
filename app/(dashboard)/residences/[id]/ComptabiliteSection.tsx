@@ -351,27 +351,73 @@ function EcheanceTableRow({ echeance }: { echeance: EcheanceRow }) {
 
 function EcheancierSection({ echeances }: { echeances: EcheanceRow[] }) {
   const [tab, setTab] = useState<(typeof ECHEANCE_TABS)[number]["key"]>("TOUS");
-  const filtered = tab === "TOUS" ? echeances : echeances.filter((e) => e.statut === tab);
+  const [annee, setAnnee] = useState<string>("TOUTES");
+  const [lotId, setLotId] = useState<string>("TOUS");
+
+  const annees = useMemo(
+    () => [...new Set(echeances.map((e) => new Date(e.mois).getFullYear()))].sort((a, b) => b - a),
+    [echeances]
+  );
+  const lots = useMemo(() => {
+    const byLot = new Map<string, string>();
+    for (const e of echeances) {
+      if (!byLot.has(e.lot.id)) byLot.set(e.lot.id, e.lot.numero);
+    }
+    return [...byLot.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [echeances]);
+
+  const filtered = echeances.filter((e) => {
+    if (tab !== "TOUS" && e.statut !== tab) return false;
+    if (annee !== "TOUTES" && new Date(e.mois).getFullYear().toString() !== annee) return false;
+    if (lotId !== "TOUS" && e.lot.id !== lotId) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-3 rounded-[var(--radius-card)] border border-border bg-bg-card p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-medium text-text-primary">Échéancier</h2>
-        <div className="flex gap-2">
-          {ECHEANCE_TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition",
-                tab === t.key
-                  ? "bg-primary text-white"
-                  : "border border-border text-text-secondary hover:text-text-primary"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={annee}
+            onChange={(e) => setAnnee(e.target.value)}
+            className="rounded-[var(--radius-button)] border border-border px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+          >
+            <option value="TOUTES">Toutes les années</option>
+            {annees.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+          <select
+            value={lotId}
+            onChange={(e) => setLotId(e.target.value)}
+            className="rounded-[var(--radius-button)] border border-border px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+          >
+            <option value="TOUS">Tous les lots</option>
+            {lots.map(([id, numero]) => (
+              <option key={id} value={id}>
+                {numero}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            {ECHEANCE_TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition",
+                  tab === t.key
+                    ? "bg-primary text-white"
+                    : "border border-border text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -392,11 +438,18 @@ function EcheancierSection({ echeances }: { echeances: EcheanceRow[] }) {
             {filtered.map((e) => (
               <EcheanceTableRow key={e.id} echeance={e} />
             ))}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && echeances.length > 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
-                  Aucune échéance. L&apos;échéancier se génère automatiquement à l&apos;assignation d&apos;un
-                  occupant avec un montant forfaitaire.
+                  Aucune échéance pour ces filtres.
+                </td>
+              </tr>
+            )}
+            {echeances.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
+                  Aucune échéance pour le moment. L&apos;échéancier démarre au premier paiement enregistré
+                  pour un lot.
                 </td>
               </tr>
             )}
