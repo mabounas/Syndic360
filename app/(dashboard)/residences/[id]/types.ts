@@ -130,6 +130,7 @@ export type EcheanceRow = {
   datePaiement: Date | null;
   referencePaiement: string | null;
   lot: {
+    id: string;
     numero: string;
     proprietaires: { user: { nom: string; prenom: string } }[];
   };

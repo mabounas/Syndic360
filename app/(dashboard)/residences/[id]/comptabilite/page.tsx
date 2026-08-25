@@ -38,6 +38,7 @@ export default async function ResidenceComptabilitePage({
         referencePaiement: true,
         lot: {
           select: {
+            id: true,
             numero: true,
             proprietaires: { select: { user: { select: { nom: true, prenom: true } } } },
           },

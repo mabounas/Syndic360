@@ -55,6 +55,134 @@ function occupantLabel(lot: EcheanceRow["lot"]) {
   return lot.proprietaires.map((p) => `${p.user.prenom} ${p.user.nom}`).join(", ") || "—";
 }
 
+// ---------- Paiement reçu (choix du copropriétaire, applique à la plus
+// ancienne échéance non payée de son lot) ----------
+
+type LotOption = { id: string; numero: string; label: string };
+
+function PaiementRecuModal({ lots, onClose }: { lots: LotOption[]; onClose: () => void }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    lotId: lots[0]?.id ?? "",
+    montant: "",
+    date: new Date().toISOString().slice(0, 10),
+    reference: "",
+    statut: "PAYE" as "PAYE" | "NON_PAYE",
+  });
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    try {
+      const res = await fetch(`/api/lots/${form.lotId}/paiement`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          statut: form.statut,
+          montantRecu: form.montant ? Number(form.montant) : null,
+          datePaiement: form.date || null,
+          referencePaiement: form.reference || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Erreur lors de l'enregistrement du paiement.");
+        return;
+      }
+      router.refresh();
+      onClose();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Modal title="Enregistrer un paiement" onClose={onClose} maxWidth="max-w-md">
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className={labelClass}>Copropriétaire</label>
+          <select
+            value={form.lotId}
+            onChange={(e) => setForm({ ...form, lotId: e.target.value })}
+            className={inputClass}
+          >
+            {lots.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>Montant (MAD)</label>
+            <input
+              required
+              type="number"
+              value={form.montant}
+              onChange={(e) => setForm({ ...form, montant: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Date</label>
+            <input
+              required
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className={inputClass}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Référence</label>
+          <input
+            placeholder="Ex: VIR-20260401 ou CHQ-1234"
+            value={form.reference}
+            onChange={(e) => setForm({ ...form, reference: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Statut</label>
+          <select
+            value={form.statut}
+            onChange={(e) => setForm({ ...form, statut: e.target.value as "PAYE" | "NON_PAYE" })}
+            className={inputClass}
+          >
+            <option value="PAYE">Payé</option>
+            <option value="NON_PAYE">Non payé</option>
+          </select>
+        </div>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="text-sm text-text-secondary hover:underline">
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={pending || lots.length === 0}
+            className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+          >
+            {pending ? "Enregistrement..." : "Enregistrer"}
+          </button>
+        </div>
+        {lots.length === 0 && (
+          <p className="text-xs text-text-secondary">
+            Aucun lot avec occupant dans cette résidence pour le moment.
+          </p>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
 // ---------- Enregistrer un paiement (par échéance) ----------
 
 function EcheanceUpdateModal({ echeance, onClose }: { echeance: EcheanceRow; onClose: () => void }) {
@@ -471,6 +599,17 @@ export function ComptabiliteSection({
   echeances: EcheanceRow[];
 }) {
   const [depenseModalOpen, setDepenseModalOpen] = useState(false);
+  const [paiementModalOpen, setPaiementModalOpen] = useState(false);
+
+  const lotOptions = useMemo(() => {
+    const byLot = new Map<string, LotOption>();
+    for (const e of echeances) {
+      if (!byLot.has(e.lot.id)) {
+        byLot.set(e.lot.id, { id: e.lot.id, numero: e.lot.numero, label: `${e.lot.numero} — ${occupantLabel(e.lot)}` });
+      }
+    }
+    return [...byLot.values()].sort((a, b) => a.numero.localeCompare(b.numero));
+  }, [echeances]);
 
   const parAnnee = useMemo(() => {
     const map = new Map<number, { recettes: number; depenses: number }>();
@@ -506,6 +645,12 @@ export function ComptabiliteSection({
             className="rounded-[var(--radius-button)] bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             Dépense
+          </button>
+          <button
+            onClick={() => setPaiementModalOpen(true)}
+            className="rounded-[var(--radius-button)] bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+          >
+            Paiement reçu
           </button>
         </div>
       </div>
@@ -575,6 +720,7 @@ export function ComptabiliteSection({
       </div>
 
       {depenseModalOpen && <DepenseModal residenceId={residenceId} onClose={() => setDepenseModalOpen(false)} />}
+      {paiementModalOpen && <PaiementRecuModal lots={lotOptions} onClose={() => setPaiementModalOpen(false)} />}
     </div>
   );
 }
