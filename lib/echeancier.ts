@@ -27,9 +27,15 @@ export async function genererEcheancier(lotId: string, referenceDate: Date = new
   await prisma.echeance.createMany({ data, skipDuplicates: true });
 }
 
-// Bascule automatiquement EN_COURS -> NON_PAYE pour toute échéance dont le
-// mois est arrivé (mois courant ou passé) et qui n'a pas été marquée payée.
-// Appelé au chargement des pages Comptabilité/Finances/Tableau de bord (pas
+// 1) Bascule automatiquement EN_COURS -> NON_PAYE pour toute échéance dont
+// le mois est arrivé (mois courant ou passé) et qui n'a pas été marquée
+// payée. 2) Garantit que tout lot occupé avec un montant forfaitaire a une
+// échéance pour le mois courant, même s'il n'a jamais eu de paiement
+// tenté — sans quoi ces lots restent invisibles dans les impayés
+// (l'échéancier n'étant plus généré qu'au premier paiement). Ne touche
+// jamais les mois futurs : ce n'est pas une génération en masse, juste le
+// minimum pour que le mois en cours soit toujours suivi. Appelé au
+// chargement des pages Comptabilité/Finances/Tableau de bord/Impayés (pas
 // de cron en environnement serverless — auto-guérison à la lecture).
 // Accepte soit un id de résidence unique, soit la clause `where` de
 // residenceScopeWhere() pour couvrir toutes les résidences visibles.
@@ -48,4 +54,26 @@ export async function actualiserEcheancesEchues(
     },
     data: { statut: "NON_PAYE" },
   });
+
+  const lotsSansEcheanceCeMois = await prisma.lot.findMany({
+    where: {
+      batiment: { residence: residenceWhere },
+      montantForfaitaire: { not: null },
+      proprietaires: { some: {} },
+      echeances: { none: { mois: startOfCurrentMonth } },
+    },
+    select: { id: true, montantForfaitaire: true },
+  });
+
+  if (lotsSansEcheanceCeMois.length > 0) {
+    await prisma.echeance.createMany({
+      data: lotsSansEcheanceCeMois.map((lot) => ({
+        lotId: lot.id,
+        mois: startOfCurrentMonth,
+        montant: lot.montantForfaitaire!,
+        statut: "NON_PAYE" as const,
+      })),
+      skipDuplicates: true,
+    });
+  }
 }
