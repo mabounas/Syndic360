@@ -2,21 +2,22 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma/client";
 
 // Génère l'échéancier mensuel d'un lot à partir de son montant forfaitaire,
-// du mois courant jusqu'à décembre de l'année en cours (pas d'anticipation
-// sur l'année suivante). Déclenché explicitement — au premier paiement d'un
-// lot, après confirmation de l'utilisateur — jamais automatiquement en
-// arrière-plan. Sans effet si le lot n'a pas de montant forfaitaire ; les
-// mois déjà existants ne sont pas dupliqués (indivision, relances).
-export async function genererEcheancier(lotId: string) {
+// du mois de `referenceDate` (par défaut aujourd'hui) jusqu'à décembre de
+// cette même année — pas d'anticipation sur l'année suivante. Déclenché
+// explicitement, après confirmation de l'utilisateur — jamais automatiquement
+// en arrière-plan. `referenceDate` permet de démarrer l'échéancier sur une
+// année passée (ex : premier paiement saisi rétroactivement pour 2024).
+// Sans effet si le lot n'a pas de montant forfaitaire ; les mois déjà
+// existants ne sont pas dupliqués (indivision, relances).
+export async function genererEcheancier(lotId: string, referenceDate: Date = new Date()) {
   const lot = await prisma.lot.findUnique({
     where: { id: lotId },
     select: { montantForfaitaire: true },
   });
   if (!lot?.montantForfaitaire) return;
 
-  const now = new Date();
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const moisRestants = 12 - now.getMonth(); // mois courant -> décembre inclus
+  const startMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const moisRestants = 12 - referenceDate.getMonth(); // mois de référence -> décembre inclus
   const data = Array.from({ length: moisRestants }, (_, i) => ({
     lotId,
     mois: new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1),

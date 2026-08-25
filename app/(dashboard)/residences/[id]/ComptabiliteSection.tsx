@@ -95,14 +95,21 @@ function PaiementRecuModal({ lots, onClose }: { lots: LotOption[]; onClose: () =
       if (res.status === 409) {
         const body = await res.json().catch(() => null);
         if (body?.needsEcheancier) {
+          const paymentDate = new Date(form.date);
+          const moisCible = paymentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+          const anneeCible = paymentDate.getFullYear();
           const confirmed = window.confirm(
-            "Ce lot n'a pas encore d'échéancier de charges. Voulez-vous en démarrer un (du mois courant à décembre) ?"
+            `Ce lot n'a pas encore d'échéancier de charges. Voulez-vous en démarrer un (de ${moisCible} à décembre ${anneeCible}) ?`
           );
           if (!confirmed) {
             setError("Paiement non enregistré — échéancier non démarré.");
             return;
           }
-          const genRes = await fetch(`/api/lots/${form.lotId}/echeancier`, { method: "POST" });
+          const genRes = await fetch(`/api/lots/${form.lotId}/echeancier`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: form.date }),
+          });
           if (!genRes.ok) {
             setError("Erreur lors du démarrage de l'échéancier.");
             return;
