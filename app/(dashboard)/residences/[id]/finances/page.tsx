@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { residenceScopeWhere } from "@/lib/rbac";
+import { actualiserEcheancesEchues } from "@/lib/echeancier";
 import { FinanceSection } from "../FinanceSection";
 import { CoproprietaireFinanceSection } from "../CoproprietaireFinanceSection";
 import type { CoproprietaireFinanceRow } from "../types";
@@ -13,8 +14,16 @@ export default async function ResidenceFinancesPage({
   const session = await requireSession();
   const { id } = await params;
 
-  const residence = await prisma.residence.findFirst({
+  const residenceScope = await prisma.residence.findFirst({
     where: { id, ...residenceScopeWhere(session) },
+    select: { id: true },
+  });
+  if (!residenceScope) return null;
+
+  await actualiserEcheancesEchues(residenceScope.id);
+
+  const residence = await prisma.residence.findFirst({
+    where: { id: residenceScope.id },
     select: {
       id: true,
       budgets: {
@@ -33,13 +42,15 @@ export default async function ResidenceFinancesPage({
             select: {
               id: true,
               numero: true,
+              soldeDepart: true,
               proprietaires: { select: { user: { select: { nom: true, prenom: true, email: true } } } },
-              quoteParts: {
+              echeances: {
                 select: {
+                  mois: true,
                   montant: true,
                   statut: true,
+                  montantRecu: true,
                   datePaiement: true,
-                  appelCharges: { select: { periode: true, budget: { select: { annee: true } } } },
                 },
               },
             },
@@ -53,31 +64,19 @@ export default async function ResidenceFinancesPage({
   const coproprietaireRows: CoproprietaireFinanceRow[] = residence.batiments
     .flatMap((b) => b.lots)
     .map((lot) => {
-      const soldeComptable = lot.quoteParts
-        .filter((qp) => qp.statut !== "PAYE")
-        .reduce((sum, qp) => sum + qp.montant, 0);
-      const situation: CoproprietaireFinanceRow["situation"] =
-        soldeComptable === 0
-          ? "A_JOUR"
-          : lot.quoteParts.some((qp) => qp.statut === "EN_RETARD")
-            ? "EN_RETARD"
-            : "EN_ATTENTE";
+      const impayes = lot.echeances
+        .filter((e) => e.statut === "NON_PAYE")
+        .reduce((sum, e) => sum + e.montant, 0);
+      const soldeComptable = lot.soldeDepart + impayes;
 
       return {
         lotId: lot.id,
         lotNumero: lot.numero,
         occupants: lot.proprietaires.map((p) => p.user),
+        soldeDepart: lot.soldeDepart,
         soldeComptable,
-        situation,
-        historique: lot.quoteParts
-          .map((qp) => ({
-            annee: qp.appelCharges.budget.annee,
-            periode: qp.appelCharges.periode,
-            montant: qp.montant,
-            statut: qp.statut,
-            datePaiement: qp.datePaiement,
-          }))
-          .sort((a, b) => b.annee - a.annee),
+        situation: soldeComptable > 0 ? "EN_RETARD" : "A_JOUR",
+        historique: [...lot.echeances].sort((a, b) => b.mois.getTime() - a.mois.getTime()),
       };
     });
 

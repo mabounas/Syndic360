@@ -4,12 +4,8 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isStaffRole, residenceScopeWhere } from "@/lib/rbac";
 import { Header } from "@/components/layout/Header";
+import { actualiserEcheancesEchues } from "@/lib/echeancier";
 import { cn } from "@/lib/utils";
-
-const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
-  EN_ATTENTE: { label: "En attente", className: "bg-warning/10 text-warning" },
-  EN_RETARD: { label: "En retard", className: "bg-danger/10 text-danger" },
-};
 
 export default async function ImpayesPage() {
   const session = await requireSession();
@@ -18,13 +14,15 @@ export default async function ImpayesPage() {
   const where = residenceScopeWhere(session);
   const anneeActuelle = new Date().getFullYear();
 
-  const quoteParts = await prisma.quotePart.findMany({
-    where: { statut: { not: "PAYE" }, lot: { batiment: { residence: where } } },
-    orderBy: [{ appelCharges: { budget: { annee: "desc" } } }, { appelCharges: { dateEcheance: "desc" } }],
+  await actualiserEcheancesEchues(where);
+
+  const echeances = await prisma.echeance.findMany({
+    where: { statut: "NON_PAYE", lot: { batiment: { residence: where } } },
+    orderBy: [{ mois: "desc" }],
     select: {
       id: true,
       montant: true,
-      statut: true,
+      mois: true,
       lot: {
         select: {
           numero: true,
@@ -32,16 +30,13 @@ export default async function ImpayesPage() {
           proprietaires: { select: { user: { select: { nom: true, prenom: true, email: true } } } },
         },
       },
-      appelCharges: {
-        select: { periode: true, dateEcheance: true, budget: { select: { annee: true } } },
-      },
     },
   });
 
-  const exerciceEnCours = quoteParts.filter((qp) => qp.appelCharges.budget.annee === anneeActuelle);
-  const exercicesAnterieurs = quoteParts.filter((qp) => qp.appelCharges.budget.annee < anneeActuelle);
+  const exerciceEnCours = echeances.filter((e) => e.mois.getFullYear() === anneeActuelle);
+  const exercicesAnterieurs = echeances.filter((e) => e.mois.getFullYear() < anneeActuelle);
 
-  function Table({ rows }: { rows: typeof quoteParts }) {
+  function Table({ rows }: { rows: typeof echeances }) {
     if (rows.length === 0) {
       return <p className="px-4 py-6 text-center text-sm text-text-secondary">Aucun impayé.</p>;
     }
@@ -53,43 +48,34 @@ export default async function ImpayesPage() {
               <th className="px-4 py-3 font-medium">Résidence</th>
               <th className="px-4 py-3 font-medium">Lot</th>
               <th className="px-4 py-3 font-medium">Copropriétaire</th>
-              <th className="px-4 py-3 font-medium">Année</th>
-              <th className="px-4 py-3 font-medium">Période</th>
-              <th className="px-4 py-3 font-medium">Échéance</th>
+              <th className="px-4 py-3 font-medium">Mois</th>
               <th className="px-4 py-3 font-medium">Montant</th>
               <th className="px-4 py-3 font-medium">Statut</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((qp) => (
-              <tr key={qp.id} className="border-b border-border last:border-0">
+            {rows.map((e) => (
+              <tr key={e.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/residences/${qp.lot.batiment.residence.id}`} className="text-primary hover:underline">
-                    {qp.lot.batiment.residence.nom}
+                  <Link href={`/residences/${e.lot.batiment.residence.id}`} className="text-primary hover:underline">
+                    {e.lot.batiment.residence.nom}
                   </Link>
                 </td>
-                <td className="px-4 py-3 font-medium text-text-primary">{qp.lot.numero}</td>
+                <td className="px-4 py-3 font-medium text-text-primary">{e.lot.numero}</td>
                 <td className="px-4 py-3 text-text-secondary">
-                  {qp.lot.proprietaires.length > 0
-                    ? qp.lot.proprietaires.map((p) => `${p.user.prenom} ${p.user.nom}`).join(", ")
+                  {e.lot.proprietaires.length > 0
+                    ? e.lot.proprietaires.map((p) => `${p.user.prenom} ${p.user.nom}`).join(", ")
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-text-secondary">{qp.appelCharges.budget.annee}</td>
-                <td className="px-4 py-3 text-text-secondary">{qp.appelCharges.periode}</td>
                 <td className="px-4 py-3 text-text-secondary">
-                  {new Date(qp.appelCharges.dateEcheance).toLocaleDateString("fr-MA")}
+                  {new Date(e.mois).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
                 </td>
                 <td className="px-4 py-3 font-medium text-text-primary">
-                  {qp.montant.toLocaleString("fr-MA")} MAD
+                  {e.montant.toLocaleString("fr-MA")} MAD
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-                      STATUT_CONFIG[qp.statut]?.className
-                    )}
-                  >
-                    {STATUT_CONFIG[qp.statut]?.label}
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", "bg-danger/10 text-danger")}>
+                    Non payé
                   </span>
                 </td>
               </tr>
@@ -100,8 +86,8 @@ export default async function ImpayesPage() {
     );
   }
 
-  const totalEnCours = exerciceEnCours.reduce((s, qp) => s + qp.montant, 0);
-  const totalAnterieur = exercicesAnterieurs.reduce((s, qp) => s + qp.montant, 0);
+  const totalEnCours = exerciceEnCours.reduce((s, e) => s + e.montant, 0);
+  const totalAnterieur = exercicesAnterieurs.reduce((s, e) => s + e.montant, 0);
 
   return (
     <div className="space-y-6">

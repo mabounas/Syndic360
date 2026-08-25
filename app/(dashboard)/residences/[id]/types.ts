@@ -109,13 +109,14 @@ export type CoproprietaireFinanceRow = {
   lotId: string;
   lotNumero: string;
   occupants: { nom: string; prenom: string; email: string }[];
+  soldeDepart: number;
   soldeComptable: number;
-  situation: "A_JOUR" | "EN_ATTENTE" | "EN_RETARD";
+  situation: "A_JOUR" | "EN_RETARD";
   historique: {
-    annee: number;
-    periode: string;
+    mois: Date;
     montant: number;
-    statut: "PAYE" | "EN_ATTENTE" | "EN_RETARD";
+    statut: "EN_COURS" | "NON_PAYE" | "PAYE";
+    montantRecu: number | null;
     datePaiement: Date | null;
   }[];
 };

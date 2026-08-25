@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 const MOIS_GENERES = 12;
 
@@ -27,15 +28,22 @@ export async function genererEcheancier(lotId: string) {
 
 // Bascule automatiquement EN_COURS -> NON_PAYE pour toute échéance dont le
 // mois est arrivé (mois courant ou passé) et qui n'a pas été marquée payée.
-// Appelé au chargement des pages Comptabilité/Finances (pas de cron en
-// environnement serverless — auto-guérison à la lecture).
-export async function actualiserEcheancesEchues(residenceId: string) {
+// Appelé au chargement des pages Comptabilité/Finances/Tableau de bord (pas
+// de cron en environnement serverless — auto-guérison à la lecture).
+// Accepte soit un id de résidence unique, soit la clause `where` de
+// residenceScopeWhere() pour couvrir toutes les résidences visibles.
+export async function actualiserEcheancesEchues(
+  residence: string | Prisma.ResidenceWhereInput
+) {
   const startOfCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const residenceWhere: Prisma.ResidenceWhereInput =
+    typeof residence === "string" ? { id: residence } : residence;
+
   await prisma.echeance.updateMany({
     where: {
       statut: "EN_COURS",
       mois: { lte: startOfCurrentMonth },
-      lot: { batiment: { residenceId } },
+      lot: { batiment: { residence: residenceWhere } },
     },
     data: { statut: "NON_PAYE" },
   });
