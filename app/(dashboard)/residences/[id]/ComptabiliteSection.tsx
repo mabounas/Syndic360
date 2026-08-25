@@ -72,21 +72,45 @@ function PaiementRecuModal({ lots, onClose }: { lots: LotOption[]; onClose: () =
     statut: "PAYE" as "PAYE" | "NON_PAYE",
   });
 
+  async function envoyerPaiement() {
+    return fetch(`/api/lots/${form.lotId}/paiement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        statut: form.statut,
+        montantRecu: form.montant ? Number(form.montant) : null,
+        datePaiement: form.date || null,
+        referencePaiement: form.reference || null,
+      }),
+    });
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setPending(true);
     try {
-      const res = await fetch(`/api/lots/${form.lotId}/paiement`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          statut: form.statut,
-          montantRecu: form.montant ? Number(form.montant) : null,
-          datePaiement: form.date || null,
-          referencePaiement: form.reference || null,
-        }),
-      });
+      let res = await envoyerPaiement();
+
+      if (res.status === 409) {
+        const body = await res.json().catch(() => null);
+        if (body?.needsEcheancier) {
+          const confirmed = window.confirm(
+            "Ce lot n'a pas encore d'échéancier de charges. Voulez-vous en démarrer un (du mois courant à décembre) ?"
+          );
+          if (!confirmed) {
+            setError("Paiement non enregistré — échéancier non démarré.");
+            return;
+          }
+          const genRes = await fetch(`/api/lots/${form.lotId}/echeancier`, { method: "POST" });
+          if (!genRes.ok) {
+            setError("Erreur lors du démarrage de l'échéancier.");
+            return;
+          }
+          res = await envoyerPaiement();
+        }
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setError(body?.error ?? "Erreur lors de l'enregistrement du paiement.");
@@ -620,16 +644,26 @@ export function ComptabiliteSection({
       else entry.depenses += e.montant;
       map.set(annee, entry);
     }
+    for (const ech of echeances) {
+      if (ech.statut !== "PAYE") continue;
+      const annee = new Date(ech.datePaiement ?? ech.mois).getFullYear();
+      const entry = map.get(annee) ?? { recettes: 0, depenses: 0 };
+      entry.recettes += ech.montantRecu ?? ech.montant;
+      map.set(annee, entry);
+    }
     return [...map.entries()].sort((a, b) => b[0] - a[0]);
-  }, [ecritures]);
+  }, [ecritures, echeances]);
 
   const { soldeTresorerie, totalEmis, encaisse, enAttente } = useMemo(() => {
-    const recettes = ecritures.filter((e) => e.type === "RECETTE").reduce((s, e) => s + e.montant, 0);
+    const recettesEcritures = ecritures.filter((e) => e.type === "RECETTE").reduce((s, e) => s + e.montant, 0);
     const depenses = ecritures.filter((e) => e.type === "DEPENSE").reduce((s, e) => s + e.montant, 0);
+    const recettesEcheances = echeances
+      .filter((e) => e.statut === "PAYE")
+      .reduce((s, e) => s + (e.montantRecu ?? e.montant), 0);
     return {
-      soldeTresorerie: recettes - depenses,
+      soldeTresorerie: recettesEcritures + recettesEcheances - depenses,
       totalEmis: echeances.reduce((s, e) => s + e.montant, 0),
-      encaisse: echeances.filter((e) => e.statut === "PAYE").reduce((s, e) => s + (e.montantRecu ?? e.montant), 0),
+      encaisse: recettesEcheances,
       enAttente: echeances.filter((e) => e.statut !== "PAYE").reduce((s, e) => s + e.montant, 0),
     };
   }, [ecritures, echeances]);

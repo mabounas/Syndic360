@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { assertLotAccess, handleApiError, requireStaffRole } from "@/lib/rbac";
 import { echeanceUpdateSchema } from "@/lib/validation";
-import { genererEcheancier } from "@/lib/echeancier";
 
 // Enregistre un paiement pour un lot sans préciser l'échéance exacte :
 // applique le paiement à la plus ancienne échéance non payée du lot
@@ -30,31 +29,32 @@ export async function POST(
       );
     }
 
-    let echeance = await prisma.echeance.findFirst({
-      where: { lotId, statut: "NON_PAYE" },
+    const startOfCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const echeance = await prisma.echeance.findFirst({
+      where: {
+        lotId,
+        OR: [{ statut: "NON_PAYE" }, { statut: "EN_COURS", mois: { lte: startOfCurrentMonth } }],
+      },
       orderBy: { mois: "asc" },
     });
 
-    // Auto-guérison : un lot assigné avant l'ajout de l'échéancier (ou
-    // réassigné sans passer par l'API) peut n'avoir aucune échéance. On
-    // tente de le générer maintenant plutôt que d'échouer silencieusement.
-    if (!echeance) {
-      await genererEcheancier(lotId);
-      echeance = await prisma.echeance.findFirst({
-        where: { lotId, statut: { in: ["NON_PAYE", "EN_COURS"] } },
-        orderBy: { mois: "asc" },
-      });
-    }
-
     if (!echeance) {
       const lot = await prisma.lot.findUnique({ where: { id: lotId }, select: { montantForfaitaire: true } });
+      if (!lot?.montantForfaitaire) {
+        return NextResponse.json(
+          {
+            error:
+              "Ce lot n'a pas de montant forfaitaire défini — impossible de démarrer un échéancier. Modifiez le lot pour en ajouter un.",
+          },
+          { status: 404 }
+        );
+      }
+      // Aucune échéance encore générée pour ce lot (premier paiement, ou
+      // nouvelle année) — le client doit demander confirmation avant de
+      // démarrer l'échéancier via POST /api/lots/[id]/echeancier.
       return NextResponse.json(
-        {
-          error: lot?.montantForfaitaire
-            ? "Aucune échéance en attente pour ce lot."
-            : "Ce lot n'a pas de montant forfaitaire défini — impossible de générer un échéancier. Modifiez le lot pour en ajouter un.",
-        },
-        { status: 404 }
+        { error: "Aucun échéancier pour ce lot.", needsEcheancier: true },
+        { status: 409 }
       );
     }
 

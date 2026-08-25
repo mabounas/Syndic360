@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getSession, unclaimedPasswordHash } from "@/lib/auth";
 import { assertResidenceAccess, handleApiError, requireStaffRole } from "@/lib/rbac";
 import { parseResidentsWorkbook } from "@/lib/excel";
-import { genererEcheancier } from "@/lib/echeancier";
 
 // Import en masse des lots + copropriétaires d'une résidence depuis un fichier
 // Excel (section 6.2 du CDC : "Import CSV/Excel d'une résidence existante").
@@ -100,7 +99,6 @@ export async function POST(
             update: { typeOccupant: row.typeOccupant },
           });
           proprietairesLinked += 1;
-          await genererEcheancier(lot.id);
         }
       } catch {
         rowErrors.push({ line: row.line, message: "Erreur lors de la création (doublon de lot possible)." });

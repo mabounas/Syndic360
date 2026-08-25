@@ -36,6 +36,7 @@ export default async function DashboardPage() {
     impayesCount,
     ecrituresRecettes,
     ecrituresDepenses,
+    echeancesPayeesTotal,
     payeMois,
     payeAnnee,
     echeancesImpayees,
@@ -51,6 +52,10 @@ export default async function DashboardPage() {
       _sum: { montant: true },
     }),
     prisma.echeance.aggregate({
+      where: { statut: "PAYE", lot: lotFilter },
+      _sum: { montantRecu: true },
+    }),
+    prisma.echeance.aggregate({
       where: { statut: "PAYE", datePaiement: { gte: startOfMonth }, lot: lotFilter },
       _sum: { montantRecu: true },
     }),
@@ -64,7 +69,10 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const tresorerie = (ecrituresRecettes._sum.montant ?? 0) - (ecrituresDepenses._sum.montant ?? 0);
+  const tresorerie =
+    (ecrituresRecettes._sum.montant ?? 0) +
+    (echeancesPayeesTotal._sum.montantRecu ?? 0) -
+    (ecrituresDepenses._sum.montant ?? 0);
   const totalImpayes = echeancesImpayees.reduce((sum, e) => sum + e.montant, 0);
   const totalImpayesAnciens = echeancesImpayees
     .filter((e) => e.mois.getFullYear() < anneeActuelle)
