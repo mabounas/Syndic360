@@ -592,24 +592,24 @@ function SaisieLibreForm({ residenceId }: { residenceId: string }) {
 export function ComptabiliteSection({
   residenceId,
   ecritures,
+  lots,
   echeances,
 }: {
   residenceId: string;
   ecritures: EcritureRow[];
+  lots: EcheanceRow["lot"][];
   echeances: EcheanceRow[];
 }) {
   const [depenseModalOpen, setDepenseModalOpen] = useState(false);
   const [paiementModalOpen, setPaiementModalOpen] = useState(false);
 
-  const lotOptions = useMemo(() => {
-    const byLot = new Map<string, LotOption>();
-    for (const e of echeances) {
-      if (!byLot.has(e.lot.id)) {
-        byLot.set(e.lot.id, { id: e.lot.id, numero: e.lot.numero, label: `${e.lot.numero} — ${occupantLabel(e.lot)}` });
-      }
-    }
-    return [...byLot.values()].sort((a, b) => a.numero.localeCompare(b.numero));
-  }, [echeances]);
+  const lotOptions = useMemo<LotOption[]>(
+    () =>
+      [...lots]
+        .sort((a, b) => a.numero.localeCompare(b.numero))
+        .map((lot) => ({ id: lot.id, numero: lot.numero, label: `${lot.numero} — ${occupantLabel(lot)}` })),
+    [lots]
+  );
 
   const parAnnee = useMemo(() => {
     const map = new Map<number, { recettes: number; depenses: number }>();

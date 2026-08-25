@@ -20,10 +20,19 @@ export default async function ResidenceComptabilitePage({
 
   await actualiserEcheancesEchues(residence.id);
 
-  const [ecritures, echeances] = await Promise.all([
+  const [ecritures, lots, echeances] = await Promise.all([
     prisma.ecritureComptable.findMany({
       where: { residenceId: residence.id },
       orderBy: { date: "desc" },
+    }),
+    prisma.lot.findMany({
+      where: { batiment: { residenceId: residence.id }, proprietaires: { some: {} } },
+      orderBy: { numero: "asc" },
+      select: {
+        id: true,
+        numero: true,
+        proprietaires: { select: { user: { select: { nom: true, prenom: true } } } },
+      },
     }),
     prisma.echeance.findMany({
       where: { lot: { batiment: { residenceId: residence.id } } },
@@ -48,6 +57,6 @@ export default async function ResidenceComptabilitePage({
   ]);
 
   return (
-    <ComptabiliteSection residenceId={residence.id} ecritures={ecritures} echeances={echeances} />
+    <ComptabiliteSection residenceId={residence.id} ecritures={ecritures} lots={lots} echeances={echeances} />
   );
 }
