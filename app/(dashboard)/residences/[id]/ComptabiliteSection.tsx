@@ -714,6 +714,22 @@ export function ComptabiliteSection({
     return [...map.entries()].sort((a, b) => b[0] - a[0]);
   }, [ecritures, echeances]);
 
+  const lignesEcritures = useMemo(() => {
+    const lignesEcheances = echeances
+      .filter((e) => e.statut === "PAYE")
+      .map((e) => ({
+        id: `ech-${e.id}`,
+        date: e.datePaiement ?? e.mois,
+        libelle: `Charges — Lot ${e.lot.numero} (${occupantLabel(e.lot)}) — ${moisLabel(e.mois)}`,
+        categorie: "Charges perçues",
+        type: "RECETTE" as const,
+        montant: e.montantRecu ?? e.montant,
+      }));
+    return [...ecritures, ...lignesEcheances].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [ecritures, echeances]);
+
   const { soldeTresorerie, totalEmis, encaisse, enAttente } = useMemo(() => {
     const recettesEcritures = ecritures.filter((e) => e.type === "RECETTE").reduce((s, e) => s + e.montant, 0);
     const depenses = ecritures.filter((e) => e.type === "DEPENSE").reduce((s, e) => s + e.montant, 0);
@@ -788,7 +804,7 @@ export function ComptabiliteSection({
               </tr>
             </thead>
             <tbody>
-              {ecritures.map((e) => (
+              {lignesEcritures.map((e) => (
                 <tr key={e.id} className="border-b border-border last:border-0">
                   <td className="px-3 py-2 text-text-secondary">
                     {new Date(e.date).toLocaleDateString("fr-MA")}
@@ -801,7 +817,7 @@ export function ComptabiliteSection({
                   <td className="px-3 py-2 text-text-primary">{e.montant.toLocaleString("fr-MA")} MAD</td>
                 </tr>
               ))}
-              {ecritures.length === 0 && (
+              {lignesEcritures.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-center text-text-secondary">
                     Aucune écriture pour le moment.
