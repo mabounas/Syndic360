@@ -35,6 +35,7 @@ type LotFormState = {
   tantiemesGeneraux: string;
   tantiemesCharges: string;
   montantForfaitaire: string;
+  soldeDepart: string;
 };
 
 const EMPTY_LOT_FORM: LotFormState = {
@@ -45,6 +46,7 @@ const EMPTY_LOT_FORM: LotFormState = {
   tantiemesGeneraux: "",
   tantiemesCharges: "",
   montantForfaitaire: "",
+  soldeDepart: "0",
 };
 
 function LotFormFields({
@@ -132,6 +134,17 @@ function LotFormFields({
             onChange={(e) => setForm({ ...form, montantForfaitaire: e.target.value })}
             className={inputClass}
           />
+          <p className="mt-1 text-xs text-text-secondary">Génère l&apos;échéancier mensuel du lot.</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-text-secondary">Solde de départ (MAD)</label>
+          <input
+            type="number"
+            value={form.soldeDepart}
+            onChange={(e) => setForm({ ...form, soldeDepart: e.target.value })}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-text-secondary">Solde reporté avant l&apos;utilisation de Syndic360.</p>
         </div>
       </div>
     </>
@@ -257,6 +270,7 @@ function NewLotModal({ batimentId, onClose }: { batimentId: string; onClose: () 
             tantiemesCharges: Number(form.tantiemesCharges || 0),
             etage: form.etage ? Number(form.etage) : undefined,
             montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : undefined,
+            soldeDepart: form.soldeDepart ? Number(form.soldeDepart) : undefined,
           }),
         });
         if (!res.ok) {
@@ -501,6 +515,7 @@ function toEditState(lot: LotWithOwners): LotFormState {
     tantiemesGeneraux: lot.tantiemesGeneraux.toString(),
     tantiemesCharges: lot.tantiemesCharges.toString(),
     montantForfaitaire: lot.montantForfaitaire?.toString() ?? "",
+    soldeDepart: lot.soldeDepart.toString(),
   };
 }
 
@@ -551,6 +566,7 @@ function LotEditModal({ lot, onClose }: { lot: LotWithOwners; onClose: () => voi
           tantiemesGeneraux: Number(form.tantiemesGeneraux || 0),
           tantiemesCharges: Number(form.tantiemesCharges || 0),
           montantForfaitaire: form.montantForfaitaire ? Number(form.montantForfaitaire) : null,
+          soldeDepart: Number(form.soldeDepart || 0),
         }),
       });
       if (!res.ok) {

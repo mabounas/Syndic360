@@ -12,6 +12,7 @@ export type LotWithOwners = {
   tantiemesCharges: number;
   etage: number | null;
   montantForfaitaire: number | null;
+  soldeDepart: number;
   proprietaires: LotOwner[];
 };
 
@@ -117,6 +118,20 @@ export type CoproprietaireFinanceRow = {
     statut: "PAYE" | "EN_ATTENTE" | "EN_RETARD";
     datePaiement: Date | null;
   }[];
+};
+
+export type EcheanceRow = {
+  id: string;
+  mois: Date;
+  montant: number;
+  statut: "EN_COURS" | "NON_PAYE" | "PAYE";
+  montantRecu: number | null;
+  datePaiement: Date | null;
+  referencePaiement: string | null;
+  lot: {
+    numero: string;
+    proprietaires: { user: { nom: string; prenom: string } }[];
+  };
 };
 
 export type TicketRow = {

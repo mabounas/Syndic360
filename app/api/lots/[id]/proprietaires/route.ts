@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, hashPassword, unclaimedPasswordHash } from "@/lib/auth";
 import { assertLotAccess, handleApiError, requireStaffRole } from "@/lib/rbac";
 import { assignProprietaireSchema } from "@/lib/validation";
+import { genererEcheancier } from "@/lib/echeancier";
 
 // Ajoute un copropriétaire/locataire à un lot. Si un mot de passe est fourni,
 // le compte est immédiatement utilisable (approuvé — vetté en personne par le
@@ -62,6 +63,8 @@ export async function POST(
     await prisma.lotProprietaire.create({
       data: { lotId, userId: user.id, typeOccupant: parsed.data.typeOccupant },
     });
+
+    await genererEcheancier(lotId);
 
     return NextResponse.json(
       { id: user.id, email: user.email, passwordSet: hasPassword },

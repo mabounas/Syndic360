@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { residenceScopeWhere } from "@/lib/rbac";
+import { actualiserEcheancesEchues } from "@/lib/echeancier";
 import { ComptabiliteSection } from "../ComptabiliteSection";
 
 export default async function ResidenceComptabilitePage({
@@ -13,9 +14,39 @@ export default async function ResidenceComptabilitePage({
 
   const residence = await prisma.residence.findFirst({
     where: { id, ...residenceScopeWhere(session) },
-    select: { id: true, ecritures: { orderBy: { date: "desc" } } },
+    select: { id: true },
   });
   if (!residence) return null;
 
-  return <ComptabiliteSection residenceId={residence.id} ecritures={residence.ecritures} />;
+  await actualiserEcheancesEchues(residence.id);
+
+  const [ecritures, echeances] = await Promise.all([
+    prisma.ecritureComptable.findMany({
+      where: { residenceId: residence.id },
+      orderBy: { date: "desc" },
+    }),
+    prisma.echeance.findMany({
+      where: { lot: { batiment: { residenceId: residence.id } } },
+      orderBy: [{ mois: "desc" }, { lot: { numero: "asc" } }],
+      select: {
+        id: true,
+        mois: true,
+        montant: true,
+        statut: true,
+        montantRecu: true,
+        datePaiement: true,
+        referencePaiement: true,
+        lot: {
+          select: {
+            numero: true,
+            proprietaires: { select: { user: { select: { nom: true, prenom: true } } } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return (
+    <ComptabiliteSection residenceId={residence.id} ecritures={ecritures} echeances={echeances} />
+  );
 }

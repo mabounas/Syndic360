@@ -251,6 +251,7 @@ model Lot {
   tantiemesCharges   Int     @default(0)
   etage              Int?
   montantForfaitaire Float?
+  soldeDepart        Float   @default(0)
   batimentId         String
 
   batiment      Batiment          @relation(fields: [batimentId], references: [id], onDelete: Cascade)
@@ -258,9 +259,38 @@ model Lot {
   quoteParts    QuotePart[]
   documents     Document[]
   votes         Vote[]
+  echeances     Echeance[]
 
   @@index([batimentId])
   @@map("lots")
+}
+
+enum EcheanceStatut {
+  EN_COURS
+  NON_PAYE
+  PAYE
+}
+
+// Échéancier mensuel par lot, généré automatiquement à l'assignation d'un
+// occupant à partir du montant forfaitaire. EN_COURS = mois pas encore
+// échu ; bascule automatiquement en NON_PAYE dès que le mois commence
+// (voir lib/echeancier.ts), sauf si déjà marqué PAYE par le syndic.
+model Echeance {
+  id                String         @id @default(cuid())
+  lotId             String
+  mois              DateTime
+  montant           Float
+  statut            EcheanceStatut @default(EN_COURS)
+  montantRecu       Float?
+  datePaiement      DateTime?
+  referencePaiement String?
+  createdAt         DateTime       @default(now())
+
+  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@unique([lotId, mois])
+  @@index([lotId])
+  @@map("echeances")
 }
 
 // Table de jointure Lot <-> User : gère l'indivision (plusieurs copropriétaires par lot)

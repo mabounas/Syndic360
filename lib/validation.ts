@@ -58,6 +58,7 @@ export const lotSchema = z.object({
   tantiemesCharges: z.coerce.number().int().min(0),
   etage: z.coerce.number().int().optional(),
   montantForfaitaire: z.coerce.number().min(0).optional(),
+  soldeDepart: z.coerce.number().optional(),
 });
 export type LotInput = z.infer<typeof lotSchema>;
 
@@ -69,6 +70,7 @@ export const lotUpdateSchema = z.object({
   tantiemesCharges: z.coerce.number().int().min(0).optional(),
   etage: z.coerce.number().int().nullable().optional(),
   montantForfaitaire: z.coerce.number().min(0).nullable().optional(),
+  soldeDepart: z.coerce.number().optional(),
 });
 export type LotUpdateInput = z.infer<typeof lotUpdateSchema>;
 
@@ -188,3 +190,11 @@ export const contactSchema = z.object({
   message: z.string().min(10, "Message trop court (10 caractères minimum)"),
 });
 export type ContactInput = z.infer<typeof contactSchema>;
+
+export const echeanceUpdateSchema = z.object({
+  statut: z.enum(["NON_PAYE", "PAYE"]),
+  montantRecu: z.coerce.number().min(0).nullable().optional(),
+  datePaiement: z.string().nullable().optional(),
+  referencePaiement: z.string().nullable().optional(),
+});
+export type EcheanceUpdateInput = z.infer<typeof echeanceUpdateSchema>;
