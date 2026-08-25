@@ -30,6 +30,20 @@ const DEPENSE_CATEGORIES = [
   "Autre",
 ];
 
+const CATEGORIE_COMPTES: Record<string, string> = {
+  "Entretien courant": "615 - Entretien courant",
+  "Assurances": "616 - Assurances",
+  "Gardiennage": "621 - Gardiennage / Personnel",
+  "Travaux": "615 - Travaux",
+  "Fonds travaux": "105 - Fonds travaux",
+  "Charges perçues": "706 - Charges perçues",
+  "Autre": "658 - Autre",
+};
+
+function compteLabel(categorie: string) {
+  return CATEGORIE_COMPTES[categorie] ?? categorie;
+}
+
 const ECHEANCE_STATUT_CONFIG: Record<EcheanceRow["statut"], { label: string; className: string }> = {
   EN_COURS: { label: "En cours", className: "bg-secondary/10 text-secondary" },
   NON_PAYE: { label: "Non payé", className: "bg-danger/10 text-danger" },
@@ -715,17 +729,27 @@ export function ComptabiliteSection({
   }, [ecritures, echeances]);
 
   const lignesEcritures = useMemo(() => {
+    const lignesManuel = ecritures.map((e) => ({
+      id: e.id,
+      date: e.date,
+      compte: compteLabel(e.categorie),
+      libelle: e.libelle,
+      type: e.type,
+      montant: e.montant,
+      piece: e.pieceJointeUrl ?? "—",
+    }));
     const lignesEcheances = echeances
       .filter((e) => e.statut === "PAYE")
       .map((e) => ({
         id: `ech-${e.id}`,
         date: e.datePaiement ?? e.mois,
+        compte: `450-${e.lot.numero}`,
         libelle: `Charges — Lot ${e.lot.numero} (${occupantLabel(e.lot)}) — ${moisLabel(e.mois)}`,
-        categorie: "Charges perçues",
         type: "RECETTE" as const,
         montant: e.montantRecu ?? e.montant,
+        piece: e.referencePaiement ?? "—",
       }));
-    return [...ecritures, ...lignesEcheances].sort(
+    return [...lignesManuel, ...lignesEcheances].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [ecritures, echeances]);
@@ -797,10 +821,11 @@ export function ComptabiliteSection({
             <thead>
               <tr className="border-b border-border text-left text-text-secondary">
                 <th className="px-3 py-2 font-medium">Date</th>
+                <th className="px-3 py-2 font-medium">Compte</th>
                 <th className="px-3 py-2 font-medium">Libellé</th>
-                <th className="px-3 py-2 font-medium">Catégorie</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Montant</th>
+                <th className="px-3 py-2 font-medium">Débit</th>
+                <th className="px-3 py-2 font-medium">Crédit</th>
+                <th className="px-3 py-2 font-medium">Pièce</th>
               </tr>
             </thead>
             <tbody>
@@ -809,17 +834,20 @@ export function ComptabiliteSection({
                   <td className="px-3 py-2 text-text-secondary">
                     {new Date(e.date).toLocaleDateString("fr-MA")}
                   </td>
+                  <td className="px-3 py-2 font-mono text-xs text-text-secondary">{e.compte}</td>
                   <td className="px-3 py-2 text-text-primary">{e.libelle}</td>
-                  <td className="px-3 py-2 text-text-secondary">{e.categorie}</td>
-                  <td className={e.type === "RECETTE" ? "px-3 py-2 text-success" : "px-3 py-2 text-danger"}>
-                    {e.type === "RECETTE" ? "Recette" : "Dépense"}
+                  <td className="px-3 py-2 text-danger">
+                    {e.type === "DEPENSE" ? `${e.montant.toLocaleString("fr-MA")} MAD` : "—"}
                   </td>
-                  <td className="px-3 py-2 text-text-primary">{e.montant.toLocaleString("fr-MA")} MAD</td>
+                  <td className="px-3 py-2 text-success">
+                    {e.type === "RECETTE" ? `${e.montant.toLocaleString("fr-MA")} MAD` : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-text-secondary">{e.piece}</td>
                 </tr>
               ))}
               {lignesEcritures.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-text-secondary">
+                  <td colSpan={6} className="px-3 py-6 text-center text-text-secondary">
                     Aucune écriture pour le moment.
                   </td>
                 </tr>
