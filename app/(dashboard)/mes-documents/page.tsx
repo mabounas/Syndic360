@@ -37,10 +37,15 @@ export default async function MesDocumentsPage() {
             className="flex items-center gap-2 px-3 py-3 text-sm text-text-primary hover:text-primary"
           >
             <FileText size={16} className="text-text-secondary" />
-            {doc.nom}
-            {doc.visibilite === "PRIVE" && (
-              <span className="text-text-secondary">· privé</span>
-            )}
+            <span className="flex-1">
+              {doc.nom}
+              {doc.visibilite === "PRIVE" && (
+                <span className="text-text-secondary"> · privé</span>
+              )}
+            </span>
+            <span className="whitespace-nowrap text-xs text-text-secondary">
+              {doc.createdAt.toLocaleDateString("fr-MA")}
+            </span>
           </a>
         ))}
         {documents.length === 0 && (

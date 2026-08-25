@@ -20,8 +20,35 @@ function moisLabel(mois: Date) {
   return new Date(mois).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
+function computeStats(historique: CoproprietaireFinanceRow["historique"]) {
+  const anneeCourante = new Date().getFullYear();
+  let impayesExerciceCourant = 0;
+  let impayesExercicesPrecedents = 0;
+  let payeExerciceCourant = 0;
+  let dernierPaiement: { date: Date; montant: number } | null = null;
+
+  for (const h of historique) {
+    const annee = new Date(h.mois).getFullYear();
+    if (h.statut === "NON_PAYE") {
+      if (annee === anneeCourante) impayesExerciceCourant += h.montant;
+      else if (annee < anneeCourante) impayesExercicesPrecedents += h.montant;
+    }
+    if (h.statut === "PAYE") {
+      const montant = h.montantRecu ?? h.montant;
+      if (annee === anneeCourante) payeExerciceCourant += montant;
+      const datePaiement = new Date(h.datePaiement ?? h.mois);
+      if (!dernierPaiement || datePaiement.getTime() > dernierPaiement.date.getTime()) {
+        dernierPaiement = { date: datePaiement, montant };
+      }
+    }
+  }
+
+  return { impayesExerciceCourant, impayesExercicesPrecedents, payeExerciceCourant, dernierPaiement };
+}
+
 function HistoriqueRow({ row }: { row: CoproprietaireFinanceRow }) {
   const [open, setOpen] = useState(false);
+  const stats = computeStats(row.historique);
 
   return (
     <>
@@ -65,6 +92,34 @@ function HistoriqueRow({ row }: { row: CoproprietaireFinanceRow }) {
       {open && (
         <tr className="border-b border-border last:border-0">
           <td colSpan={7} className="bg-bg-page px-4 py-3">
+            <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-[var(--radius-button)] bg-bg-card p-3 text-xs">
+                <p className="text-text-secondary">Impayés exercice en cours</p>
+                <p className="mt-1 font-medium text-danger">
+                  {stats.impayesExerciceCourant.toLocaleString("fr-MA")} MAD
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] bg-bg-card p-3 text-xs">
+                <p className="text-text-secondary">Impayés exercices précédents</p>
+                <p className="mt-1 font-medium text-danger">
+                  {stats.impayesExercicesPrecedents.toLocaleString("fr-MA")} MAD
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] bg-bg-card p-3 text-xs">
+                <p className="text-text-secondary">Payé exercice en cours</p>
+                <p className="mt-1 font-medium text-success">
+                  {stats.payeExerciceCourant.toLocaleString("fr-MA")} MAD
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] bg-bg-card p-3 text-xs">
+                <p className="text-text-secondary">Dernier paiement</p>
+                <p className="mt-1 font-medium text-text-primary">
+                  {stats.dernierPaiement
+                    ? `${stats.dernierPaiement.montant.toLocaleString("fr-MA")} MAD — ${stats.dernierPaiement.date.toLocaleDateString("fr-MA")}`
+                    : "—"}
+                </p>
+              </div>
+            </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-text-secondary">
